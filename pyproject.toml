@@ -4,10 +4,14 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "psycopg2-binary>=2.9.9",
+]
 
 [tool.uv]
 dev-dependencies = [
     "pre-commit>=3.8.0",
+    "pytest>=8.3.3",
     "ruff>=0.6.8",
+    "testcontainers>=4.8.1",
 ]

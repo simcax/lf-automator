@@ -1,0 +1,29 @@
+databaseType = "PostgreSql"
+id = "9ffbf3cf-6c33-44cb-bcf7-552c5538e477"
+name = "db-automator"
+
+[flyway]
+locations = [ "filesystem:migrations" ]
+mixed = true
+outOfOrder = true
+schemaModelLocation = "schema-model"
+validateMigrationNaming = true
+
+  [flyway.check]
+  majorTolerance = 0
+
+[flywayDesktop]
+developmentEnvironment = "development"
+schemaModel = "schema-model"
+shadowEnvironment = "shadow"
+
+[redgateCompare]
+filterFile = "filter.rgf"
+
+[redgateCompare.postgresql.options.ignores]
+ignoreNewlinesInTextObjects = "off"
+
+[environments.cluster-lfautomator]
+url = "jdbc:postgresql://localhost:5432/lfautomator"
+schemas = [ "lfautomator" ]
+displayName = "lfautomator"
