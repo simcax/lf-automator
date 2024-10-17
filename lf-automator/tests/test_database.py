@@ -2,8 +2,6 @@
 
 from pathlib import Path
 
-from automator.database.db import Database
-
 
 def test_database_connection(db_connection):
     """Test the database connection."""
@@ -15,7 +13,7 @@ def test_database_connection(db_connection):
     assert db_connection.cursor is None
 
 
-def test_database_tables_exist(db_credentials):
+def test_database_tables_exist(db_connection):
     """Test that the database tables exists and are loaded from the migration script."""
     # First load the migration file
     # parent_parent_dir = Path(__file__).parent.parent
@@ -36,14 +34,8 @@ def test_database_tables_exist(db_credentials):
     assert table_name is not None
     # Now test that the table exists in the database
 
-    db = Database(
-        host=db_credentials.get("host"),
-        port=db_credentials.get("port"),
-        database=db_credentials.get("database"),
-        user=db_credentials.get("user"),
-        password=db_credentials.get("password"),
-    )
-    db.create_connection()
+    db = db_connection
+
     with db.cursor as cursor:
         cursor.execute(
             "SELECT * \

@@ -36,28 +36,36 @@ def setup(request):
 
 
 @pytest.fixture()
-def db_credentials():
+def db_connection():
     """Fixture to get the database credentials from the environment."""
-    creds = {
-        "host": os.environ.get("DB_HOST"),
-        "port": os.environ.get("DB_PORT"),
-        "database": os.environ.get("DB_NAME"),
-        "user": os.environ.get("DB_USERNAME"),
-        "password": os.environ.get("DB_PASSWORD"),
-        "connection_url": os.environ.get("DB_CONN"),
-    }
-    return creds
-
-
-@pytest.fixture()
-def db_connection(db_credentials):
-    db = Database(
-        host=db_credentials.get("host"),
-        port=db_credentials.get("port"),
-        database=db_credentials.get("database"),
-        user=db_credentials.get("user"),
-        password=db_credentials.get("password"),
-    )
+    db = Database()
     db.create_connection()
     yield db
     db.close()
+
+
+# def db_credentials():
+#     """Fixture to get the database credentials from the environment."""
+#     creds = {
+#         "host": os.environ.get("DB_HOST"),
+#         "port": os.environ.get("DB_PORT"),
+#         "database": os.environ.get("DB_NAME"),
+#         "user": os.environ.get("DB_USERNAME"),
+#         "password": os.environ.get("DB_PASSWORD"),
+#         "connection_url": os.environ.get("DB_CONN"),
+#     }
+#     return creds
+
+
+# @pytest.fixture()
+# def db_connection(db_credentials):
+#     db = Database(
+#         host=db_credentials.get("host"),
+#         port=db_credentials.get("port"),
+#         database=db_credentials.get("database"),
+#         user=db_credentials.get("user"),
+#         password=db_credentials.get("password"),
+#     )
+#     db.create_connection()
+#     yield db
+#     db.close()

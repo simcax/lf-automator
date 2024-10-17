@@ -1,7 +1,7 @@
 CREATE SCHEMA IF NOT EXISTS lfautomator;
 
 CREATE TABLE IF NOT EXISTS lfautomator.accessTokenPools (
-    poolUuid UUID NOT NULL PRIMARY KEY,
+    poolUuid UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
     poolDate DATE NOT NULL DEFAULT CURRENT_DATE,
     startCount SMALLINT NOT NULL,
     currentCount SMALLINT NOT NULL
