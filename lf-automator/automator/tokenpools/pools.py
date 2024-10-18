@@ -9,12 +9,16 @@ from automator.database.db import Database
 class TokenPool:
     """Implements the concept of having a pool of tokens that can be used, and counted down."""
 
-    def __init__(self):
+    def __init__(self, pool_uuid=None):
         """Initialize the class."""
         self.token_count = 0
         self.current_token_count = 0
         self.db = None
         self.register_db_connection()
+        if pool_uuid:
+            self.pool_uuid = pool_uuid
+            self.token_count = self.get_tokenpool(pool_uuid)
+            self.current_token_count = self.token_count
 
     def register_db_connection(self):
         """Connect to the database."""
@@ -56,3 +60,34 @@ class TokenPool:
         except Exception as error:
             raise (ValueError(f"Error getting token pool: {error}"))
         return token_count
+
+    def add_tokens_to_tokenpool(self, token_count):
+        """Add tokens to the token pool."""
+        try:
+            with self.db.connection:
+                with self.db.connection.cursor() as cursor:
+                    cursor.execute(
+                        "UPDATE lfautomator.accessTokenPools SET currentcount = currentcount + %s WHERE pooluuid = %s",
+                        (token_count, self.pool_uuid),
+                    )
+        except Exception as error:
+            raise (ValueError(f"Error adding tokens to token pool: {error}"))
+        self.current_token_count += token_count
+        return self.current_token_count
+
+    def remove_tokens_from_tokenpool(self, token_count):
+        """Remove tokens from the token pool."""
+        # Make sure we have enough tokens to remove
+        if self.current_token_count - token_count < 0:
+            raise (ValueError("Not enough tokens in the pool"))
+        try:
+            with self.db.connection:
+                with self.db.connection.cursor() as cursor:
+                    cursor.execute(
+                        "UPDATE lfautomator.accessTokenPools SET currentcount = currentcount - %s WHERE pooluuid = %s",
+                        (token_count, self.pool_uuid),
+                    )
+        except Exception as error:
+            raise (ValueError(f"Error removing tokens from token pool: {error}"))
+        self.current_token_count -= token_count
+        return self.current_token_count
