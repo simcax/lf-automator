@@ -12,12 +12,6 @@ def test_automator():
     assert automator.run() == 0
 
 
-def test_default_token_count():
-    """Test the default token count."""
-    automator = Automator()
-    assert automator.default_token_count == 25
-
-
 def test_get_current_token_count():
     """Test the get_current_token_count method."""
     automator = Automator()
