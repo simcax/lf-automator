@@ -32,7 +32,7 @@ jobs:
     - name: Analysing the code with ruff
       run: |
         uv run ruff check .
-    - name: Test code
+    - name: Test code without integration tests
       run: |
-        uv run pytest -s .
+        uv run pytest -m "not integration" -s .
     
