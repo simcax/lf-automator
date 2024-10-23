@@ -6,6 +6,8 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "psycopg2-binary>=2.9.9",
+    "python-dotenv>=1.0.1",
+    "sendgrid>=6.11.0",
 ]
 
 [tool.uv]
@@ -14,4 +16,9 @@ dev-dependencies = [
     "pytest>=8.3.3",
     "ruff>=0.6.8",
     "testcontainers>=4.8.1",
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: Tests for testing integration",
 ]

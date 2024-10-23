@@ -6,7 +6,6 @@ class Automator:
 
     def __init__(self):
         """Initialize the class."""
-        self.default_token_count = 25
         self.current_token_count = 0
         self.token_threshold = 10
 
