@@ -89,7 +89,7 @@ class AlertManager:
                 )
 
             # Send email
-            result = self.mailer.send_email(email_content, self.mailer.sender)
+            self.mailer.send_email(email_content, self.mailer.sender)
 
             # Update alert state to active
             self._update_alert_state(is_active=True)

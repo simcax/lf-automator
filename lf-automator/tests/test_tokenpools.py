@@ -173,7 +173,7 @@ def test_distribute_tokens_from_single_pool():
     # Get current total to understand the baseline
     total_before = tokenpool.get_total_available_tokens()
 
-    pool_uuid = tokenpool.create_tokenpool(10)
+    tokenpool.create_tokenpool(10)
 
     result = tokenpool.distribute_tokens(5)
     assert result is True
@@ -190,10 +190,10 @@ def test_distribute_tokens_with_auto_switching():
     # Get baseline
     total_before = tokenpool1.get_total_available_tokens()
 
-    uuid1 = tokenpool1.create_tokenpool(5)
+    tokenpool1.create_tokenpool(5)
 
     tokenpool2 = TokenPool()
-    uuid2 = tokenpool2.create_tokenpool(10)
+    tokenpool2.create_tokenpool(10)
 
     # Distribute 8 tokens - should take from oldest pools first
     result = tokenpool1.distribute_tokens(8)
@@ -242,10 +242,10 @@ def test_switch_primary_pool():
     # Get baseline
     total_before = tokenpool1.get_total_available_tokens()
 
-    uuid1 = tokenpool1.create_tokenpool(5)
+    tokenpool1.create_tokenpool(5)
 
     tokenpool2 = TokenPool()
-    uuid2 = tokenpool2.create_tokenpool(10)
+    tokenpool2.create_tokenpool(10)
 
     # Distribute 5 tokens - should deplete from oldest pools
     tokenpool1.distribute_tokens(5)
