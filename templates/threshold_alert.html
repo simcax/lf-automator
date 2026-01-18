@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Inventory Alert</title>
+    <style>
+        body {{
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }}
+        .alert-box {{
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }}
+        h2 {{
+            color: #856404;
+            margin-top: 0;
+        }}
+        .metric {{
+            background-color: #f8f9fa;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }}
+        .metric strong {{
+            color: #495057;
+        }}
+        .warning {{
+            color: #dc3545;
+            font-weight: bold;
+        }}
+    </style>
+</head>
+<body>
+    <div class="alert-box">
+        <h2>⚠️ Token Inventory Alert</h2>
+        <p>The token inventory has fallen below the configured threshold.</p>
+        
+        <div class="metric">
+            <strong>Current Token Count:</strong> <span class="warning">{current_count}</span>
+        </div>
+        
+        <div class="metric">
+            <strong>Threshold:</strong> {threshold}
+        </div>
+        
+        <p>Please order more tokens to maintain adequate inventory levels.</p>
+        
+        <p style="margin-top: 20px; font-size: 0.9em; color: #6c757d;">
+            This is an automated alert from the Lejre Fitness Token Inventory Tracking system.
+        </p>
+    </div>
+</body>
+</html>
