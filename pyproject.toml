@@ -5,8 +5,10 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "foreninglet-data>=0.4.0",
     "psycopg2-binary>=2.9.9",
     "python-dotenv>=1.0.1",
+    "requests>=2.32.3",
     "sendgrid>=6.11.0",
 ]
 

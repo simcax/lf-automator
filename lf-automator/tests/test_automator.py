@@ -2,7 +2,13 @@
 
 import random
 
+import pytest
 from automator.automation import Automator
+from dotenv import load_dotenv
+from foreninglet_data.api import ForeningLet
+from foreninglet_data.memberlist import Memberlist
+
+load_dotenv()
 
 
 def test_automator():
@@ -41,3 +47,16 @@ def test_adding_tokens():
     assert automator.current_token_count == 25
     automator.add_tokens(10)
     assert automator.current_token_count == 35
+
+
+@pytest.mark.integration
+def test_find_token_field_on_member():
+    """Test finding the token field on a member."""
+    fl_obj = ForeningLet()
+    memberlist = fl_obj.get_memberlist()
+    memberlist_obj = Memberlist(memberlist)
+    for member in memberlist_obj.memberlist:
+        token_field = member.get("MemberField3")
+        assert token_field is not None
+        # Just assert one member having the field
+        break

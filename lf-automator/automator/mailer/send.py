@@ -29,5 +29,5 @@ class Mailer:
             print(response.body)
             print(response.headers)
         except Exception as e:
-            print(e.message)
+            print(str(e))
         return 0
