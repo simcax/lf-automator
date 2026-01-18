@@ -7,15 +7,23 @@ import pytest
 from automator.database.db import Database
 from testcontainers.postgres import PostgresContainer
 
-script = (
+script1 = (
     Path(__file__).parent.parent
     / "db-automator/migrations/V001_20241013143045__carstenskov.sql"
+)
+
+script2 = (
+    Path(__file__).parent.parent
+    / "db-automator/migrations/V002_20250118000000__token_inventory_tracking.sql"
 )
 
 
 postgres = PostgresContainer("postgres:16-alpine")
 postgres.with_volume_mapping(
-    host=str(script), container=f"/docker-entrypoint-initdb.d/{script.name}"
+    host=str(script1), container=f"/docker-entrypoint-initdb.d/{script1.name}"
+)
+postgres.with_volume_mapping(
+    host=str(script2), container=f"/docker-entrypoint-initdb.d/{script2.name}"
 )
 
 
