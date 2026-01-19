@@ -158,11 +158,11 @@ class ConfigLoader:
                 - host, port, name, username, password
         """
         return {
-            "host": os.getenv("DB_HOST", "localhost"),
-            "port": int(os.getenv("DB_PORT", "5432")),
-            "name": os.getenv("DB_NAME", "lfautomator"),
-            "username": os.getenv("DB_USERNAME", ""),
-            "password": os.getenv("DB_PASSWORD", ""),
+            "host": os.getenv("POSTGRESQL_ADDON_HOST", "localhost"),
+            "port": int(os.getenv("POSTGRESQL_ADDON_PORT", "5432")),
+            "name": os.getenv("POSTGRESQL_ADDON_DB", "lfautomator"),
+            "username": os.getenv("POSTGRESQL_ADDON_USER", ""),
+            "password": os.getenv("POSTGRESQL_ADDON_PASSWORD", ""),
         }
 
     @staticmethod
