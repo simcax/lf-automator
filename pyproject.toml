@@ -1,11 +1,12 @@
 [project]
 name = "lf-automator"
 version = "0.1.0"
-description = "Add your description here"
+description = "Lejre Fitness token inventory tracking and automation system"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "apscheduler>=3.10.0",
+    "flask>=3.0.0",
     "foreninglet-data>=0.4.0",
     "psycopg2-binary>=2.9.9",
     "python-dotenv>=1.0.1",
@@ -13,11 +14,23 @@ dependencies = [
     "sendgrid>=6.11.0",
 ]
 
+[project.scripts]
+lf-automator = "lf_automator.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["lf-automator"]
+
 [tool.uv]
 dev-dependencies = [
     "hypothesis>=6.0.0",
+    "playwright>=1.40.0",
     "pre-commit>=3.8.0",
     "pytest>=8.3.3",
+    "pytest-playwright>=0.4.0",
     "ruff>=0.6.8",
     "testcontainers>=4.8.1",
 ]
