@@ -5,7 +5,11 @@ from pathlib import Path
 
 import pytest
 from automator.database.db import Database
+from dotenv import load_dotenv
 from testcontainers.postgres import PostgresContainer
+
+# Load environment variables from .env file
+load_dotenv()
 
 script1 = (
     Path(__file__).parent.parent

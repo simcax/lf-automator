@@ -1,5 +1,232 @@
 """Route handlers for the web dashboard."""
 
-from flask import Blueprint
+from automator.tokenpools.pools import TokenPool
+from flask import Blueprint, jsonify, redirect, render_template, request, url_for
+from loguru import logger
+from webapp.auth import check_access_key, clear_session, require_auth, set_authenticated
 
 bp = Blueprint("main", __name__)
+
+
+def get_pool_state(pool: dict) -> str:
+    """Calculate the state of a token pool based on thresholds.
+
+    Args:
+        pool: Dictionary containing pool information with 'current_count' key
+
+    Returns:
+        String indicating pool state: "critical", "warning", or "normal"
+    """
+    current_count = pool.get("current_count", 0)
+
+    # Define thresholds
+    # Critical: 5 or fewer tokens
+    # Warning: 10 or fewer tokens
+    # Normal: more than 10 tokens
+
+    if current_count <= 5:
+        return "critical"
+    elif current_count <= 10:
+        return "warning"
+    else:
+        return "normal"
+
+
+@bp.route("/login", methods=["GET", "POST"])
+def login():
+    """Display login form and process access key submission.
+
+    GET: Display the login form
+    POST: Process access key submission and authenticate user
+
+    Returns:
+        GET: Rendered login template
+        POST: Redirect to dashboard on success, or login form with error on failure
+    """
+    if request.method == "POST":
+        # Get access key from form
+        provided_key = request.form.get("access_key", "")
+
+        # Validate access key
+        if check_access_key(provided_key):
+            # Set session authentication flag
+            set_authenticated(True)
+            # Redirect to dashboard
+            return redirect(url_for("main.dashboard"))
+        else:
+            # Show error message
+            return render_template(
+                "login.html", error="Invalid access key. Please try again."
+            )
+
+    # GET request - display login form
+    return render_template("login.html")
+
+
+@bp.route("/logout", methods=["POST"])
+@require_auth
+def logout():
+    """Clear authentication session and redirect to login.
+
+    Returns:
+        Redirect to login page
+    """
+    clear_session()
+    return redirect(url_for("main.login"))
+
+
+@bp.route("/")
+@require_auth
+def dashboard():
+    """Display the token pool dashboard.
+
+    Fetches all token pools from the database and displays them with their
+    current state (normal/warning/critical).
+
+    Returns:
+        Rendered dashboard template with pool data or error message
+    """
+    try:
+        # Create TokenPool instance to access database methods
+        token_pool = TokenPool()
+
+        # Query database for all token pools
+        pools = []
+        with token_pool.db.connection:
+            with token_pool.db.connection.cursor() as cursor:
+                cursor.execute(
+                    """SELECT pooluuid, pooldate, startcount, currentcount, poolStatus, poolPriority
+                       FROM lfautomator.accessTokenPools 
+                       ORDER BY poolPriority ASC"""
+                )
+                rows = cursor.fetchall()
+
+                for row in rows:
+                    pool_data = {
+                        "pool_uuid": str(row[0]),
+                        "pool_date": row[1],
+                        "start_count": row[2],
+                        "current_count": row[3],
+                        "pool_status": row[4],
+                        "pool_priority": row[5],
+                    }
+                    # Calculate state for each pool
+                    pool_data["state"] = get_pool_state(pool_data)
+                    pools.append(pool_data)
+
+        return render_template("dashboard.html", pools=pools)
+
+    except Exception as error:
+        logger.error(f"Error loading token pools: {error}")
+        return render_template(
+            "dashboard.html",
+            pools=[],
+            error="Unable to load token pools. Please try again later.",
+        )
+
+
+@bp.route("/api/pools", methods=["GET"])
+@require_auth
+def get_pools():
+    """Fetch current token pool data as JSON.
+
+    Returns JSON array of pool objects for use by the refresh functionality.
+
+    Returns:
+        JSON response with pool data or error message
+    """
+    try:
+        # Create TokenPool instance to access database methods
+        token_pool = TokenPool()
+
+        # Query database for all token pools
+        pools = []
+        with token_pool.db.connection:
+            with token_pool.db.connection.cursor() as cursor:
+                cursor.execute(
+                    """SELECT pooluuid, pooldate, startcount, currentcount, poolStatus, poolPriority
+                       FROM lfautomator.accessTokenPools 
+                       ORDER BY poolPriority ASC"""
+                )
+                rows = cursor.fetchall()
+
+                for row in rows:
+                    pool_data = {
+                        "pool_uuid": str(row[0]),
+                        "pool_date": row[1].strftime("%Y-%m-%d") if row[1] else None,
+                        "start_count": row[2],
+                        "current_count": row[3],
+                        "pool_status": row[4],
+                        "pool_priority": row[5],
+                    }
+                    # Calculate state for each pool
+                    pool_data["state"] = get_pool_state(pool_data)
+                    pools.append(pool_data)
+
+        return jsonify(pools)
+
+    except Exception as error:
+        logger.error(f"Error fetching token pools: {error}")
+        return jsonify({"error": "Unable to fetch token pools"}), 500
+
+
+@bp.route("/api/pools", methods=["POST"])
+@require_auth
+def create_pool():
+    """Create a new token pool.
+
+    Expects JSON body with:
+        - token_count: Number of tokens in the pool (required)
+        - pool_status: Status of the pool (optional, defaults to "active")
+
+    Returns:
+        JSON response with created pool data or error message
+    """
+    try:
+        # Get request data
+        data = request.get_json()
+
+        if not data:
+            return jsonify({"error": "Request body is required"}), 400
+
+        # Validate token_count
+        token_count = data.get("token_count")
+        if token_count is None:
+            return jsonify({"error": "token_count is required"}), 400
+
+        try:
+            token_count = int(token_count)
+        except (ValueError, TypeError):
+            return jsonify({"error": "token_count must be a valid integer"}), 400
+
+        if token_count <= 0:
+            return jsonify({"error": "token_count must be greater than 0"}), 400
+
+        # Get optional pool_status (defaults to "active")
+        pool_status = data.get("pool_status", "active")
+
+        # Create the pool
+        token_pool = TokenPool()
+        pool_uuid = token_pool.create_tokenpool(
+            token_count=token_count, pool_status=pool_status
+        )
+
+        # Return the created pool data
+        return (
+            jsonify(
+                {
+                    "pool_uuid": str(pool_uuid),
+                    "token_count": token_count,
+                    "pool_status": pool_status,
+                    "message": "Pool created successfully",
+                }
+            ),
+            201,
+        )
+
+    except ValueError as error:
+        logger.error(f"Validation error creating pool: {error}")
+        return jsonify({"error": str(error)}), 400
+    except Exception as error:
+        logger.error(f"Error creating token pool: {error}")
+        return jsonify({"error": "Unable to create token pool"}), 500
