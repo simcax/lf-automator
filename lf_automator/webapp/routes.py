@@ -170,6 +170,183 @@ def get_pools():
         return jsonify({"error": "Unable to fetch token pools"}), 500
 
 
+@bp.route("/api/pools/<pool_id>/activate", methods=["POST"])
+@require_auth
+def activate_pool(pool_id):
+    """Activate a token pool.
+
+    Args:
+        pool_id: UUID of the pool to activate
+
+    Returns:
+        JSON response with success status or error message
+    """
+    try:
+        # Create TokenPool instance to access database methods
+        token_pool = TokenPool()
+
+        # Verify pool exists
+        with token_pool.db.connection:
+            with token_pool.db.connection.cursor() as cursor:
+                cursor.execute(
+                    """SELECT pooluuid, poolStatus 
+                       FROM lfautomator.accessTokenPools 
+                       WHERE pooluuid = %s""",
+                    (pool_id,),
+                )
+                row = cursor.fetchone()
+
+                if not row:
+                    return jsonify({"error": "Pool not found"}), 404
+
+                current_status = row[1]
+
+                # Update pool status to active
+                cursor.execute(
+                    """UPDATE lfautomator.accessTokenPools 
+                       SET poolStatus = 'active' 
+                       WHERE pooluuid = %s""",
+                    (pool_id,),
+                )
+
+        return jsonify(
+            {
+                "success": True,
+                "message": "Pool activated successfully",
+                "pool_id": str(pool_id),
+                "previous_status": current_status,
+            }
+        )
+
+    except Exception as error:
+        logger.error(f"Error activating pool {pool_id}: {error}")
+        return jsonify({"error": "Unable to activate pool"}), 500
+
+
+@bp.route("/api/pools/<pool_id>/transaction", methods=["POST"])
+@require_auth
+def pool_transaction(pool_id):
+    """Process a deposit or withdraw transaction for a token pool.
+
+    Args:
+        pool_id: UUID of the pool to update
+
+    Expects JSON body with:
+        - transaction_type: "deposit" or "withdraw" (required)
+        - count: Number of tokens to deposit/withdraw (required, positive integer)
+
+    Returns:
+        JSON response with updated pool data or error message
+    """
+    try:
+        # Get request data
+        data = request.get_json()
+
+        if not data:
+            return jsonify({"error": "Request body is required"}), 400
+
+        # Validate transaction_type
+        transaction_type = data.get("transaction_type")
+        if not transaction_type:
+            return jsonify({"error": "transaction_type is required"}), 400
+
+        if transaction_type not in ["deposit", "withdraw"]:
+            return (
+                jsonify({"error": "transaction_type must be 'deposit' or 'withdraw'"}),
+                400,
+            )
+
+        # Validate count
+        count = data.get("count")
+        if count is None:
+            return jsonify({"error": "count is required"}), 400
+
+        try:
+            count = int(count)
+        except (ValueError, TypeError):
+            return jsonify({"error": "count must be a valid integer"}), 400
+
+        if count <= 0:
+            return jsonify({"error": "count must be greater than 0"}), 400
+
+        # Create TokenPool instance to access database methods
+        token_pool = TokenPool()
+
+        # Process the transaction
+        with token_pool.db.connection:
+            with token_pool.db.connection.cursor() as cursor:
+                # Get current pool data
+                cursor.execute(
+                    """SELECT pooluuid, pooldate, startcount, currentcount, poolStatus, poolPriority
+                       FROM lfautomator.accessTokenPools 
+                       WHERE pooluuid = %s""",
+                    (pool_id,),
+                )
+                row = cursor.fetchone()
+
+                if not row:
+                    return jsonify({"error": "Pool not found"}), 404
+
+                current_count = row[3]
+
+                # Calculate new count based on transaction type
+                if transaction_type == "deposit":
+                    new_count = current_count + count
+                else:  # withdraw
+                    new_count = current_count - count
+                    # Prevent negative counts
+                    if new_count < 0:
+                        return (
+                            jsonify(
+                                {
+                                    "error": f"Cannot withdraw {count} tokens. Only {current_count} tokens available."
+                                }
+                            ),
+                            400,
+                        )
+
+                # Update the pool's current count
+                cursor.execute(
+                    """UPDATE lfautomator.accessTokenPools 
+                       SET currentcount = %s 
+                       WHERE pooluuid = %s""",
+                    (new_count, pool_id),
+                )
+
+                # Fetch updated pool data
+                cursor.execute(
+                    """SELECT pooluuid, pooldate, startcount, currentcount, poolStatus, poolPriority
+                       FROM lfautomator.accessTokenPools 
+                       WHERE pooluuid = %s""",
+                    (pool_id,),
+                )
+                updated_row = cursor.fetchone()
+
+                pool_data = {
+                    "pool_uuid": str(updated_row[0]),
+                    "pool_date": (
+                        updated_row[1].strftime("%Y-%m-%d") if updated_row[1] else None
+                    ),
+                    "start_count": updated_row[2],
+                    "current_count": updated_row[3],
+                    "pool_status": updated_row[4],
+                    "pool_priority": updated_row[5],
+                }
+                pool_data["state"] = get_pool_state(pool_data)
+
+        return jsonify(
+            {
+                "success": True,
+                "message": f"Successfully {transaction_type}ed {count} tokens",
+                "pool": pool_data,
+            }
+        )
+
+    except Exception as error:
+        logger.error(f"Error processing transaction for pool {pool_id}: {error}")
+        return jsonify({"error": "Unable to process transaction"}), 500
+
+
 @bp.route("/api/pools", methods=["POST"])
 @require_auth
 def create_pool():
@@ -177,7 +354,7 @@ def create_pool():
 
     Expects JSON body with:
         - token_count: Number of tokens in the pool (required)
-        - pool_status: Status of the pool (optional, defaults to "active")
+        - pool_status: Status of the pool (optional, defaults to "inactive")
 
     Returns:
         JSON response with created pool data or error message
@@ -202,8 +379,20 @@ def create_pool():
         if token_count <= 0:
             return jsonify({"error": "token_count must be greater than 0"}), 400
 
-        # Get optional pool_status (defaults to "active")
-        pool_status = data.get("pool_status", "active")
+        # Get optional pool_status (defaults to "inactive" to require explicit activation)
+        pool_status = data.get("pool_status", "inactive")
+
+        # Validate pool_status
+        valid_statuses = ["active", "inactive", "pending"]
+        if pool_status not in valid_statuses:
+            return (
+                jsonify(
+                    {
+                        "error": f"pool_status must be one of: {', '.join(valid_statuses)}"
+                    }
+                ),
+                400,
+            )
 
         # Create the pool
         token_pool = TokenPool()
@@ -230,3 +419,16 @@ def create_pool():
     except Exception as error:
         logger.error(f"Error creating token pool: {error}")
         return jsonify({"error": "Unable to create token pool"}), 500
+
+
+@bp.route("/health", methods=["GET"])
+def health_check():
+    """Health check endpoint for liveness monitoring.
+
+    This endpoint does not require authentication and is used by Clever Cloud
+    for liveness checks.
+
+    Returns:
+        JSON response with status "ok"
+    """
+    return jsonify({"status": "ok"})

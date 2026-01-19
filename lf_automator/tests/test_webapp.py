@@ -778,3 +778,207 @@ class TestDashboardRoute:
             assert "20" in response_text
             assert "10" in response_text
             assert "15" in response_text
+
+
+class TestDepositWithdrawEndpoint:
+    """Tests for the deposit/withdraw transaction endpoint."""
+
+    @pytest.mark.integration
+    def test_deposit_increases_pool_count(self, db_connection):
+        """Test that deposit transaction increases pool count."""
+        from automator.tokenpools.pools import TokenPool
+
+        # Create a pool
+        pool = TokenPool()
+        pool_uuid = pool.create_tokenpool(token_count=10, pool_status="active")
+
+        app = create_app()
+
+        with app.test_client() as client:
+            # Authenticate
+            with client.session_transaction() as sess:
+                sess["authenticated"] = True
+
+            # Deposit 5 tokens
+            response = client.post(
+                f"/api/pools/{pool_uuid}/transaction",
+                json={"transaction_type": "deposit", "count": 5},
+            )
+
+            # Should return 200
+            assert response.status_code == 200
+
+            # Verify response
+            data = response.get_json()
+            assert data["success"] is True
+            assert data["pool"]["current_count"] == 15
+
+    @pytest.mark.integration
+    def test_withdraw_decreases_pool_count(self, db_connection):
+        """Test that withdraw transaction decreases pool count."""
+        from automator.tokenpools.pools import TokenPool
+
+        # Create a pool
+        pool = TokenPool()
+        pool_uuid = pool.create_tokenpool(token_count=10, pool_status="active")
+
+        app = create_app()
+
+        with app.test_client() as client:
+            # Authenticate
+            with client.session_transaction() as sess:
+                sess["authenticated"] = True
+
+            # Withdraw 3 tokens
+            response = client.post(
+                f"/api/pools/{pool_uuid}/transaction",
+                json={"transaction_type": "withdraw", "count": 3},
+            )
+
+            # Should return 200
+            assert response.status_code == 200
+
+            # Verify response
+            data = response.get_json()
+            assert data["success"] is True
+            assert data["pool"]["current_count"] == 7
+
+    @pytest.mark.integration
+    def test_withdraw_prevents_negative_count(self, db_connection):
+        """Test that withdraw transaction prevents negative counts."""
+        from automator.tokenpools.pools import TokenPool
+
+        # Create a pool with 5 tokens
+        pool = TokenPool()
+        pool_uuid = pool.create_tokenpool(token_count=5, pool_status="active")
+
+        app = create_app()
+
+        with app.test_client() as client:
+            # Authenticate
+            with client.session_transaction() as sess:
+                sess["authenticated"] = True
+
+            # Try to withdraw 10 tokens (more than available)
+            response = client.post(
+                f"/api/pools/{pool_uuid}/transaction",
+                json={"transaction_type": "withdraw", "count": 10},
+            )
+
+            # Should return 400
+            assert response.status_code == 400
+
+            # Verify error message
+            data = response.get_json()
+            assert "error" in data
+            assert "Cannot withdraw" in data["error"]
+
+    @pytest.mark.integration
+    def test_transaction_requires_authentication(self, db_connection):
+        """Test that transaction endpoint requires authentication."""
+        from automator.tokenpools.pools import TokenPool
+
+        # Create a pool
+        pool = TokenPool()
+        pool_uuid = pool.create_tokenpool(token_count=10, pool_status="active")
+
+        app = create_app()
+
+        with app.test_client() as client:
+            # Try to deposit without authentication
+            response = client.post(
+                f"/api/pools/{pool_uuid}/transaction",
+                json={"transaction_type": "deposit", "count": 5},
+                follow_redirects=False,
+            )
+
+            # Should redirect to login
+            assert response.status_code == 302
+            assert "/login" in response.location
+
+    @pytest.mark.integration
+    def test_transaction_validates_transaction_type(self, db_connection):
+        """Test that transaction endpoint validates transaction type."""
+        from automator.tokenpools.pools import TokenPool
+
+        # Create a pool
+        pool = TokenPool()
+        pool_uuid = pool.create_tokenpool(token_count=10, pool_status="active")
+
+        app = create_app()
+
+        with app.test_client() as client:
+            # Authenticate
+            with client.session_transaction() as sess:
+                sess["authenticated"] = True
+
+            # Try with invalid transaction type
+            response = client.post(
+                f"/api/pools/{pool_uuid}/transaction",
+                json={"transaction_type": "invalid", "count": 5},
+            )
+
+            # Should return 400
+            assert response.status_code == 400
+
+            # Verify error message
+            data = response.get_json()
+            assert "error" in data
+            assert "transaction_type" in data["error"]
+
+    @pytest.mark.integration
+    def test_transaction_validates_count(self, db_connection):
+        """Test that transaction endpoint validates count."""
+        from automator.tokenpools.pools import TokenPool
+
+        # Create a pool
+        pool = TokenPool()
+        pool_uuid = pool.create_tokenpool(token_count=10, pool_status="active")
+
+        app = create_app()
+
+        with app.test_client() as client:
+            # Authenticate
+            with client.session_transaction() as sess:
+                sess["authenticated"] = True
+
+            # Try with negative count
+            response = client.post(
+                f"/api/pools/{pool_uuid}/transaction",
+                json={"transaction_type": "deposit", "count": -5},
+            )
+
+            # Should return 400
+            assert response.status_code == 400
+
+            # Verify error message
+            data = response.get_json()
+            assert "error" in data
+            assert "greater than 0" in data["error"]
+
+    @pytest.mark.integration
+    def test_transaction_returns_404_for_nonexistent_pool(self, db_connection):
+        """Test that transaction endpoint returns 404 for nonexistent pool."""
+        import uuid
+
+        app = create_app()
+
+        with app.test_client() as client:
+            # Authenticate
+            with client.session_transaction() as sess:
+                sess["authenticated"] = True
+
+            # Try to deposit to nonexistent pool
+            fake_uuid = str(uuid.uuid4())
+            response = client.post(
+                f"/api/pools/{fake_uuid}/transaction",
+                json={"transaction_type": "deposit", "count": 5},
+            )
+
+            # Should return 404
+            assert response.status_code == 404
+
+            # Verify error message
+            data = response.get_json()
+            assert "error" in data
+            assert "not found" in data["error"].lower()

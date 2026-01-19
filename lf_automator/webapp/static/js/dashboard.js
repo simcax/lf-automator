@@ -58,6 +58,40 @@ function showMessage(message, type = 'info') {
  * @returns {string} HTML string for the pool card
  */
 function createPoolCard(pool) {
+    // Determine status badge HTML
+    let statusBadge = '';
+    if (pool.pool_status === 'inactive') {
+        statusBadge = `
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 border border-gray-300">
+                INACTIVE
+            </span>
+        `;
+    } else if (pool.pool_status === 'active') {
+        statusBadge = `
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-300">
+                ACTIVE
+            </span>
+        `;
+    } else if (pool.pool_status === 'pending') {
+        statusBadge = `
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-300">
+                PENDING RELEASE
+            </span>
+        `;
+    } else if (pool.pool_status === 'depleted') {
+        statusBadge = `
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 border border-red-300">
+                DEPLETED
+            </span>
+        `;
+    } else {
+        statusBadge = `
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-300">
+                ACTIVE
+            </span>
+        `;
+    }
+    
     // Determine state badge HTML
     let stateBadge = '';
     if (pool.state === 'critical') {
@@ -89,11 +123,54 @@ function createPoolCard(pool) {
         `;
     }
     
+    // Determine action buttons HTML
+    let actionButtons = '';
+    if (pool.pool_status === 'inactive') {
+        actionButtons = `
+            <button 
+                class="activate-pool-btn w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+                data-pool-id="${pool.pool_uuid}"
+            >
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                Activate Pool
+            </button>
+        `;
+    } else {
+        actionButtons = `
+            <div class="flex space-x-2">
+                <button class="flex-1 inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                    View Details
+                </button>
+                <button class="deposit-withdraw-btn flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors" data-pool-id="${pool.pool_uuid}">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                    </svg>
+                    Deposit/Withdraw
+                </button>
+            </div>
+        `;
+    }
+    
+    // Apply opacity for inactive pools
+    const cardOpacity = pool.pool_status === 'inactive' ? 'opacity-75' : '';
+    const borderClass = pool.pool_status === 'inactive' ? 'border-gray-400' : 'border-gray-200';
+    
     return `
-        <div class="pool-card bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200">
+        <div class="pool-card bg-white border ${borderClass} ${cardOpacity} rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200">
             <div class="p-6">
                 <!-- Pool Name -->
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Pool #${pool.pool_uuid.substring(0, 8)}</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Pool #${pool.pool_uuid.substring(0, 8)}</h3>
+                
+                <!-- Status Badge -->
+                <div class="mb-4">
+                    ${statusBadge}
+                </div>
                 
                 <!-- Pool State Badge -->
                 <div class="mb-4">
@@ -112,15 +189,15 @@ function createPoolCard(pool) {
                         <span class="text-sm text-gray-900">${pool.start_count}</span>
                     </div>
                     
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm text-gray-600">Status:</span>
-                        <span class="text-sm text-gray-900 capitalize">${pool.pool_status}</span>
-                    </div>
-                    
                     <div class="pt-3 border-t border-gray-200">
                         <span class="text-xs text-gray-500">Last Updated:</span>
                         <p class="text-xs text-gray-700 mt-1">${pool.pool_date || 'N/A'}</p>
                     </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="mt-4">
+                    ${actionButtons}
                 </div>
             </div>
         </div>
@@ -151,6 +228,28 @@ function updatePoolsDisplay(pools) {
         if (poolsContainer) {
             poolsContainer.classList.remove('hidden');
             poolsContainer.innerHTML = pools.map(pool => createPoolCard(pool)).join('');
+            
+            // Re-attach event listeners to activation buttons after DOM update
+            const activateButtons = document.querySelectorAll('.activate-pool-btn');
+            activateButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const poolId = this.getAttribute('data-pool-id');
+                    if (poolId) {
+                        activatePool(poolId);
+                    }
+                });
+            });
+            
+            // Re-attach event listeners to deposit/withdraw buttons after DOM update
+            const depositWithdrawButtons = document.querySelectorAll('.deposit-withdraw-btn');
+            depositWithdrawButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const poolId = this.getAttribute('data-pool-id');
+                    if (poolId) {
+                        showDepositWithdrawModal(poolId);
+                    }
+                });
+            });
         }
     }
 }
@@ -231,6 +330,19 @@ function showNewPoolModal() {
                                 placeholder="Enter number of tokens"
                             />
                         </div>
+                        <div class="mb-4">
+                            <label class="flex items-center">
+                                <input 
+                                    type="checkbox" 
+                                    id="createAsActive" 
+                                    name="createAsActive" 
+                                    checked
+                                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                />
+                                <span class="ml-2 text-sm text-gray-700">Create as active</span>
+                            </label>
+                            <p class="mt-1 text-xs text-gray-500">Inactive pools require manual activation before use</p>
+                        </div>
                         <div class="flex justify-end space-x-3">
                             <button 
                                 type="button" 
@@ -287,7 +399,9 @@ function showNewPoolModal() {
  */
 async function createNewPool() {
     const tokenCountInput = document.getElementById('tokenCount');
+    const createAsActiveCheckbox = document.getElementById('createAsActive');
     const tokenCount = parseInt(tokenCountInput.value);
+    const isActive = createAsActiveCheckbox.checked;
     
     if (!tokenCount || tokenCount <= 0) {
         showMessage('Please enter a valid token count', 'error');
@@ -295,6 +409,9 @@ async function createNewPool() {
     }
     
     try {
+        // Determine pool_status based on checkbox
+        const poolStatus = isActive ? 'active' : 'inactive';
+        
         // Send POST request to create pool
         const response = await fetch('/api/pools', {
             method: 'POST',
@@ -303,7 +420,7 @@ async function createNewPool() {
             },
             body: JSON.stringify({
                 token_count: tokenCount,
-                pool_status: 'active'
+                pool_status: poolStatus
             })
         });
         
@@ -320,7 +437,8 @@ async function createNewPool() {
         }
         
         // Show success message
-        showMessage('Pool created successfully', 'success');
+        const statusMessage = isActive ? 'active' : 'inactive';
+        showMessage(`Pool created successfully as ${statusMessage}`, 'success');
         
         // Refresh the pools display
         await refreshPools();
@@ -328,6 +446,151 @@ async function createNewPool() {
     } catch (error) {
         console.error('Error creating pool:', error);
         showMessage(error.message || 'Failed to create pool. Please try again.', 'error');
+    }
+}
+
+/**
+ * Activate a token pool
+ * @param {string} poolId - UUID of the pool to activate
+ */
+async function activatePool(poolId) {
+    try {
+        // Send POST request to activate pool
+        const response = await fetch(`/api/pools/${poolId}/activate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to activate pool');
+        }
+        
+        // Show success message
+        showMessage('Pool activated successfully', 'success');
+        
+        // Refresh the pools display to show updated status
+        await refreshPools();
+        
+    } catch (error) {
+        console.error('Error activating pool:', error);
+        showMessage(error.message || 'Failed to activate pool. Please try again.', 'error');
+    }
+}
+
+/**
+ * Show modal dialog for deposit/withdraw transaction
+ * @param {string} poolId - UUID of the pool to perform transaction on
+ */
+function showDepositWithdrawModal(poolId) {
+    const modal = document.getElementById('depositWithdrawModal');
+    
+    if (!modal) {
+        console.error('Deposit/Withdraw modal not found');
+        return;
+    }
+    
+    // Store pool ID in modal for later use
+    modal.setAttribute('data-pool-id', poolId);
+    
+    // Reset form
+    const form = document.getElementById('depositWithdrawForm');
+    if (form) {
+        form.reset();
+    }
+    
+    // Clear any previous error messages
+    const errorElement = document.getElementById('transactionError');
+    if (errorElement) {
+        errorElement.classList.add('hidden');
+        errorElement.textContent = '';
+    }
+    
+    // Show modal
+    modal.classList.remove('hidden');
+    
+    // Focus on count input
+    const countInput = document.getElementById('transactionCount');
+    if (countInput) {
+        setTimeout(() => countInput.focus(), 100);
+    }
+}
+
+/**
+ * Hide the deposit/withdraw modal
+ */
+function hideDepositWithdrawModal() {
+    const modal = document.getElementById('depositWithdrawModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.removeAttribute('data-pool-id');
+    }
+}
+
+/**
+ * Submit a deposit or withdraw transaction
+ * @param {string} poolId - UUID of the pool
+ * @param {string} transactionType - "deposit" or "withdraw"
+ * @param {number} count - Number of tokens
+ */
+async function submitTransaction(poolId, transactionType, count) {
+    const errorElement = document.getElementById('transactionError');
+    
+    try {
+        // Validate inputs
+        if (!poolId) {
+            throw new Error('Pool ID is required');
+        }
+        
+        if (!transactionType || !['deposit', 'withdraw'].includes(transactionType)) {
+            throw new Error('Invalid transaction type');
+        }
+        
+        if (!count || count <= 0) {
+            throw new Error('Count must be greater than 0');
+        }
+        
+        // Send POST request to transaction endpoint
+        const response = await fetch(`/api/pools/${poolId}/transaction`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                transaction_type: transactionType,
+                count: count
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to process transaction');
+        }
+        
+        // Hide modal
+        hideDepositWithdrawModal();
+        
+        // Show success message
+        showMessage(data.message || `Successfully ${transactionType}ed ${count} tokens`, 'success');
+        
+        // Refresh the pools display to show updated counts
+        await refreshPools();
+        
+    } catch (error) {
+        console.error('Error processing transaction:', error);
+        
+        // Show error in modal
+        if (errorElement) {
+            errorElement.textContent = error.message || 'Failed to process transaction. Please try again.';
+            errorElement.classList.remove('hidden');
+        } else {
+            // Fallback to global message if error element not found
+            showMessage(error.message || 'Failed to process transaction. Please try again.', 'error');
+        }
     }
 }
 
@@ -345,6 +608,67 @@ function init() {
     const newPoolButton = document.getElementById('newPoolButton');
     if (newPoolButton) {
         newPoolButton.addEventListener('click', showNewPoolModal);
+    }
+    
+    // Attach click handlers to activation buttons
+    const activateButtons = document.querySelectorAll('.activate-pool-btn');
+    activateButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const poolId = this.getAttribute('data-pool-id');
+            if (poolId) {
+                activatePool(poolId);
+            }
+        });
+    });
+    
+    // Attach click handlers to deposit/withdraw buttons
+    const depositWithdrawButtons = document.querySelectorAll('.deposit-withdraw-btn');
+    depositWithdrawButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const poolId = this.getAttribute('data-pool-id');
+            if (poolId) {
+                showDepositWithdrawModal(poolId);
+            }
+        });
+    });
+    
+    // Attach event listeners to deposit/withdraw modal
+    const depositWithdrawModal = document.getElementById('depositWithdrawModal');
+    if (depositWithdrawModal) {
+        // Cancel button
+        const cancelButton = document.getElementById('cancelTransactionButton');
+        if (cancelButton) {
+            cancelButton.addEventListener('click', hideDepositWithdrawModal);
+        }
+        
+        // Close modal on background click
+        depositWithdrawModal.addEventListener('click', (e) => {
+            if (e.target.id === 'depositWithdrawModal') {
+                hideDepositWithdrawModal();
+            }
+        });
+        
+        // Form submission
+        const form = document.getElementById('depositWithdrawForm');
+        if (form) {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                // Get pool ID from modal
+                const poolId = depositWithdrawModal.getAttribute('data-pool-id');
+                
+                // Get transaction type
+                const transactionTypeInput = document.querySelector('input[name="transactionType"]:checked');
+                const transactionType = transactionTypeInput ? transactionTypeInput.value : 'deposit';
+                
+                // Get count
+                const countInput = document.getElementById('transactionCount');
+                const count = countInput ? parseInt(countInput.value) : 0;
+                
+                // Submit transaction
+                await submitTransaction(poolId, transactionType, count);
+            });
+        }
     }
 }
 
