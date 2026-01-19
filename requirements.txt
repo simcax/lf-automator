@@ -34,6 +34,8 @@ foreninglet-data==0.4.0
     # via lf-automator
 greenlet==3.3.0
     # via playwright
+gunicorn==23.0.0
+    # via lf-automator
 hypothesis==6.150.2
 identify==2.6.1
     # via pre-commit
@@ -64,6 +66,7 @@ numpy==2.1.2
     # via pandas
 packaging==24.1
     # via
+    #   gunicorn
     #   marshmallow
     #   pytest
 pandas==2.2.3
