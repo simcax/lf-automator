@@ -10,3 +10,9 @@ wheels/
 .venv
 sendgrid.env
 .env
+
+# Node.js dependencies
+node_modules/
+
+# TailwindCSS output
+lf-automator/webapp/static/css/output.css
