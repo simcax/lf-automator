@@ -48,7 +48,7 @@ jobs:
             -v ${{ github.workspace }}/lf_automator/db-automator/migrations:/flyway/sql \
             -v ${{ github.workspace }}/flyway/drivers:/flyway/drivers \
             flyway/flyway:11-alpine \
-            -url="jdbc:postgres:${{ secrets.POSTGRESQL_ADDON_HOST }}:${{ secrets.POSTGRESQL_ADDON_PORT }}/${{ secrets.POSTGRESQL_ADDON_DB }}" \
+            -url="jdbc:postgresql:${{ secrets.POSTGRESQL_ADDON_HOST }}:${{ secrets.POSTGRESQL_ADDON_PORT }}/${{ secrets.POSTGRESQL_ADDON_DB }}" \
             -user="${{ secrets.POSTGRESQL_ADDON_USER }}" \
             -password="${{ secrets.POSTGRESQL_ADDON_PASSWORD }}" \
             -schemas=lfautomator \
@@ -64,7 +64,7 @@ jobs:
             -v ${{ github.workspace }}/lf_automator/db-automator/migrations:/flyway/sql \
             -v ${{ github.workspace }}/flyway/drivers:/flyway/drivers \
             flyway/flyway:11-alpine \
-            -url="jdbc:postgres:${{ secrets.POSTGRESQL_ADDON_HOST }}:${{ secrets.POSTGRESQL_ADDON_PORT }}/${{ secrets.POSTGRESQL_ADDON_DB }}" \
+            -url="jdbc:postgresql:${{ secrets.POSTGRESQL_ADDON_HOST }}:${{ secrets.POSTGRESQL_ADDON_PORT }}/${{ secrets.POSTGRESQL_ADDON_DB }}" \
             -user="${{ secrets.POSTGRESQL_ADDON_USER }}" \
             -password="${{ secrets.POSTGRESQL_ADDON_PASSWORD }}" \
             -schemas=lfautomator \
