@@ -47,7 +47,7 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}/lf_automator/db-automator/migrations:/flyway/sql \
             -v ${{ github.workspace }}/flyway/drivers:/flyway/drivers \
-            flyway/flyway:10-alpine \
+            flyway/flyway:11-alpine \
             -url="${{ secrets.POSTGRESQL_ADDON_URI }}" \
             -user="${{ secrets.POSTGRESQL_ADDON_USER }}" \
             -password="${{ secrets.POSTGRESQL_ADDON_PASSWORD }}" \
@@ -63,7 +63,7 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}/lf_automator/db-automator/migrations:/flyway/sql \
             -v ${{ github.workspace }}/flyway/drivers:/flyway/drivers \
-            flyway/flyway:10-alpine \
+            flyway/flyway:11-alpine \
             -url="${{ secrets.POSTGRESQL_ADDON_URI }}" \
             -user="${{ secrets.POSTGRESQL_ADDON_USER }}" \
             -password="${{ secrets.POSTGRESQL_ADDON_PASSWORD }}" \
