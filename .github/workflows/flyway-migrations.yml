@@ -1,0 +1,79 @@
+name: Flyway Database Migrations
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'lf_automator/db-automator/migrations/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set environment variables
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "TARGET_ENV=${{ inputs.environment }}" >> $GITHUB_ENV
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "TARGET_ENV=production" >> $GITHUB_ENV
+          else
+            echo "TARGET_ENV=staging" >> $GITHUB_ENV
+          fi
+
+      - name: Run Flyway migrations
+        uses: docker://flyway/flyway:10-alpine
+        env:
+          FLYWAY_URL: ${{ secrets.DB_URL }}
+          FLYWAY_USER: ${{ secrets.DB_USERNAME }}
+          FLYWAY_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          FLYWAY_SCHEMAS: lfautomator
+          FLYWAY_VALIDATE_MIGRATION_NAMING: true
+          FLYWAY_MIXED: true
+          FLYWAY_OUT_OF_ORDER: true
+        with:
+          args: >-
+            -url=${{ secrets.DB_URL }}
+            -user=${{ secrets.DB_USERNAME }}
+            -password=${{ secrets.DB_PASSWORD }}
+            -schemas=lfautomator
+            -locations=filesystem:/github/workspace/lf_automator/db-automator/migrations
+            migrate
+
+      - name: Flyway info
+        uses: docker://flyway/flyway:10-alpine
+        env:
+          FLYWAY_URL: ${{ secrets.DB_URL }}
+          FLYWAY_USER: ${{ secrets.DB_USERNAME }}
+          FLYWAY_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          FLYWAY_SCHEMAS: lfautomator
+        with:
+          args: >-
+            -url=${{ secrets.DB_URL }}
+            -user=${{ secrets.DB_USERNAME }}
+            -password=${{ secrets.DB_PASSWORD }}
+            -schemas=lfautomator
+            -locations=filesystem:/github/workspace/lf_automator/db-automator/migrations
+            info
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Flyway migration failed for ${{ env.TARGET_ENV }} environment"
+          exit 1
