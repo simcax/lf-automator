@@ -40,7 +40,7 @@ jobs:
       - name: Download PostgreSQL JDBC Driver
         run: |
           mkdir -p ${{ github.workspace }}/flyway/drivers
-          wget -O ${{ github.workspace }}/flyway/drivers/postgresql.jar https://jdbc.postgresql.org/download/postgresql-42.7.3.jar
+          wget -O ${{ github.workspace }}/flyway/drivers/postgresql.jar https://jdbc.postgresql.org/download/postgresql-42.7.9.jar
 
       - name: Run Flyway migrations
         run: |
@@ -48,7 +48,7 @@ jobs:
             -v ${{ github.workspace }}/lf_automator/db-automator/migrations:/flyway/sql \
             -v ${{ github.workspace }}/flyway/drivers:/flyway/drivers \
             flyway/flyway:11-alpine \
-            -url="${{ secrets.POSTGRESQL_ADDON_URI }}" \
+            -url="jdbc:${{ secrets.POSTGRESQL_ADDON_URI }}" \
             -user="${{ secrets.POSTGRESQL_ADDON_USER }}" \
             -password="${{ secrets.POSTGRESQL_ADDON_PASSWORD }}" \
             -schemas=lfautomator \
@@ -64,7 +64,7 @@ jobs:
             -v ${{ github.workspace }}/lf_automator/db-automator/migrations:/flyway/sql \
             -v ${{ github.workspace }}/flyway/drivers:/flyway/drivers \
             flyway/flyway:11-alpine \
-            -url="${{ secrets.POSTGRESQL_ADDON_URI }}" \
+            -url="jdbc:${{ secrets.POSTGRESQL_ADDON_URI }}" \
             -user="${{ secrets.POSTGRESQL_ADDON_USER }}" \
             -password="${{ secrets.POSTGRESQL_ADDON_PASSWORD }}" \
             -schemas=lfautomator \
