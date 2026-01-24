@@ -9,10 +9,11 @@ import threading
 import time
 
 import pytest
-from automator.tokenpools.pools import TokenPool
 from loguru import logger
 from playwright.sync_api import Page, expect
-from webapp.app import create_app
+
+from lf_automator.automator.tokenpools.pools import TokenPool
+from lf_automator.webapp.app import create_app
 
 
 @pytest.fixture(scope="module")
@@ -303,42 +304,37 @@ class TestTokenPoolDisplay:
                 pool_name = pool_card.locator(f"text=/Pool #{pool_uuid_short}/i")
                 expect(pool_name).to_be_visible()
 
-                # Verify current count is displayed (look for the bold text specifically)
-                current_count_label = pool_card.locator("text=/Current Count:/i")
-                expect(current_count_label).to_be_visible()
-
-                # Verify the current count value is present
-                current_count_value = pool_card.locator(".text-lg.font-bold")
+                # Verify current count is displayed in the circular progress indicator
+                current_count_value = pool_card.locator(".text-3xl.font-bold")
+                expect(current_count_value).to_be_visible()
                 expect(current_count_value).to_have_text(
                     str(test_pool["current_count"])
                 )
 
                 # Verify state indicator is displayed with correct state
                 if test_pool["state"] == "critical":
-                    state_badge = pool_card.locator("text=/Critical/i")
-                    expect(state_badge).to_be_visible()
-                    # Verify critical color styling
-                    expect(state_badge).to_have_class(re.compile(r"bg-red-100"))
+                    # Check for state in the details section
+                    state_text = pool_card.locator("text=/critical/i")
+                    expect(state_text).to_be_visible()
                 elif test_pool["state"] == "warning":
-                    state_badge = pool_card.locator("text=/Warning/i")
-                    expect(state_badge).to_be_visible()
-                    # Verify warning color styling
-                    expect(state_badge).to_have_class(re.compile(r"bg-yellow-100"))
+                    state_text = pool_card.locator("text=/warning/i")
+                    expect(state_text).to_be_visible()
                 else:  # normal
-                    state_badge = pool_card.locator("text=/Normal/i")
-                    expect(state_badge).to_be_visible()
-                    # Verify normal color styling
-                    expect(state_badge).to_have_class(re.compile(r"bg-green-100"))
+                    state_text = pool_card.locator("text=/normal/i")
+                    expect(state_text).to_be_visible()
 
                 # Verify timestamp is displayed
                 timestamp_label = pool_card.locator("text=/Last Updated:/i")
                 expect(timestamp_label).to_be_visible()
 
-                # Verify status is displayed
-                status_text = pool_card.locator(
-                    f"text={test_pool['status'].capitalize()}"
+                # Verify status is displayed in the Status detail box
+                # Look for the status in the grid details section, not the badge
+                status_detail = pool_card.locator(".bg-gray-50.rounded-lg.p-3").filter(
+                    has_text="Status"
                 )
-                expect(status_text).to_be_visible()
+                status_value = status_detail.locator(".font-semibold")
+                # The status is stored as lowercase in the database
+                expect(status_value).to_have_text(test_pool["status"])
 
         finally:
             # Cleanup: Delete test pools
@@ -430,31 +426,29 @@ class TestTokenPoolDisplay:
             for i, test_pool in enumerate(test_pools):
                 pool_card = pool_cards.nth(i)
 
-                # Find the state badge within this pool card
+                # Find the state text in the details section (not a badge)
+                # The state is displayed in the "State" detail box with capitalize
+                state_text = pool_card.locator(
+                    f"text={test_pool['state'].capitalize()}"
+                )
+
+                # Verify the state text is visible
+                expect(state_text).to_be_visible()
+
+                # Verify the circular progress indicator has the correct color
+                # The progress circle uses different colors based on state
                 if test_pool["state"] == "critical":
-                    state_badge = pool_card.locator("text=/Critical/i")
+                    # Check for red color in the SVG circle
+                    progress_circle = pool_card.locator("circle.text-red-500")
+                    expect(progress_circle).to_be_visible()
                 elif test_pool["state"] == "warning":
-                    state_badge = pool_card.locator("text=/Warning/i")
+                    # Check for orange color in the SVG circle
+                    progress_circle = pool_card.locator("circle.text-orange-500")
+                    expect(progress_circle).to_be_visible()
                 else:  # normal
-                    state_badge = pool_card.locator("text=/Normal/i")
-
-                # Verify the badge is visible
-                expect(state_badge).to_be_visible()
-
-                # Verify background color class
-                expect(state_badge).to_have_class(
-                    re.compile(re.escape(test_pool["expected_color"]))
-                )
-
-                # Verify text color class
-                expect(state_badge).to_have_class(
-                    re.compile(re.escape(test_pool["expected_text_color"]))
-                )
-
-                # Verify border color class
-                expect(state_badge).to_have_class(
-                    re.compile(re.escape(test_pool["expected_border"]))
-                )
+                    # Check for green color in the SVG circle
+                    progress_circle = pool_card.locator("circle.text-green-500")
+                    expect(progress_circle).to_be_visible()
 
         finally:
             # Cleanup: Delete test pools
@@ -716,3 +710,250 @@ class TestNewPoolCreation:
 
         # Verify modal is closed
         expect(modal).not_to_be_visible()
+
+
+class TestTokenPoolActivation:
+    """Tests for token pool activation functionality using Playwright.
+
+    Feature: web-dashboard, Property 5: Pool activation updates database
+    Validates: Requirements 9.2, 9.3
+    """
+
+    def test_activate_button_visible_for_inactive_pool(
+        self, page: Page, flask_server: dict, db_connection
+    ):
+        """Test that Activate Pool button is visible for inactive pools.
+
+        Validates: Requirements 9.1, 9.4
+        """
+        base_url = flask_server["base_url"]
+        valid_key = flask_server["access_key"]
+
+        # Create an inactive pool
+        pool = TokenPool()
+        pool_uuid = pool.create_tokenpool(
+            token_count=20, pool_status="inactive", pool_priority=1
+        )
+
+        try:
+            # Login to access dashboard
+            page.goto(f"{base_url}/login")
+            access_key_input = page.locator('input[name="access_key"]')
+            access_key_input.fill(valid_key)
+            submit_button = page.locator('button[type="submit"]')
+            submit_button.click()
+
+            # Wait for navigation to dashboard
+            page.wait_for_url(f"{base_url}/")
+
+            # Verify INACTIVE badge is visible
+            inactive_badge = page.locator("text=/INACTIVE/i").first
+            expect(inactive_badge).to_be_visible()
+
+            # Verify Activate Pool button is visible
+            activate_button = page.locator(
+                f'button.toggle-status-btn[data-pool-id="{pool_uuid}"]:has-text("Activate Pool")'
+            )
+            expect(activate_button).to_be_visible()
+
+            # Verify button has correct styling (green background)
+            expect(activate_button).to_have_class(re.compile(r"bg-green-600"))
+
+        finally:
+            # Cleanup: Delete test pool
+            try:
+                with db_connection.connection:
+                    with db_connection.connection.cursor() as cursor:
+                        cursor.execute(
+                            "DELETE FROM lfautomator.accessTokenPools WHERE pooluuid = %s",
+                            (pool_uuid,),
+                        )
+            except Exception as e:
+                logger.error(f"Error cleaning up test pool: {e}")
+
+    def test_activate_pool_button_updates_status(
+        self, page: Page, flask_server: dict, db_connection
+    ):
+        """Test that clicking Activate Pool button updates pool status to active.
+
+        Property 5: Pool activation updates database
+        Validates: Requirements 9.2, 9.3
+        """
+        base_url = flask_server["base_url"]
+        valid_key = flask_server["access_key"]
+
+        # Create an inactive pool
+        pool = TokenPool()
+        pool_uuid = pool.create_tokenpool(
+            token_count=20, pool_status="inactive", pool_priority=1
+        )
+
+        try:
+            # Login to access dashboard
+            page.goto(f"{base_url}/login")
+            access_key_input = page.locator('input[name="access_key"]')
+            access_key_input.fill(valid_key)
+            submit_button = page.locator('button[type="submit"]')
+            submit_button.click()
+
+            # Wait for navigation to dashboard
+            page.wait_for_url(f"{base_url}/")
+
+            # Verify pool is initially inactive
+            inactive_badge = page.locator("text=/INACTIVE/i").first
+            expect(inactive_badge).to_be_visible()
+
+            # Click the Activate Pool button
+            activate_button = page.locator(
+                f'button.toggle-status-btn[data-pool-id="{pool_uuid}"]:has-text("Activate Pool")'
+            )
+            activate_button.click()
+
+            # Wait for API call to complete and pools to refresh
+            page.wait_for_timeout(4000)
+
+            # Verify pool status changed in database
+            with db_connection.connection:
+                with db_connection.connection.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT poolStatus FROM lfautomator.accessTokenPools WHERE pooluuid = %s",
+                        (pool_uuid,),
+                    )
+                    row = cursor.fetchone()
+                    assert row is not None, "Pool not found in database"
+                    assert row[0] == "active", "Pool status should be active"
+
+            # Verify UI updated - pool should now show ACTIVE badge
+            active_badge = page.locator("text=/ACTIVE/i").first
+            expect(active_badge).to_be_visible()
+
+        finally:
+            # Cleanup: Delete test pool
+            try:
+                with db_connection.connection:
+                    with db_connection.connection.cursor() as cursor:
+                        cursor.execute(
+                            "DELETE FROM lfautomator.accessTokenPools WHERE pooluuid = %s",
+                            (pool_uuid,),
+                        )
+            except Exception as e:
+                logger.error(f"Error cleaning up test pool: {e}")
+
+    def test_deactivate_pool_button_updates_status(
+        self, page: Page, flask_server: dict, db_connection
+    ):
+        """Test that clicking Deactivate Pool button updates pool status to inactive.
+
+        Validates: Requirements 9.2, 9.3
+        """
+        base_url = flask_server["base_url"]
+        valid_key = flask_server["access_key"]
+
+        # Create an active pool
+        pool = TokenPool()
+        pool_uuid = pool.create_tokenpool(
+            token_count=20, pool_status="active", pool_priority=1
+        )
+
+        try:
+            # Login to access dashboard
+            page.goto(f"{base_url}/login")
+            access_key_input = page.locator('input[name="access_key"]')
+            access_key_input.fill(valid_key)
+            submit_button = page.locator('button[type="submit"]')
+            submit_button.click()
+
+            # Wait for navigation to dashboard
+            page.wait_for_url(f"{base_url}/")
+
+            # Verify pool is initially active
+            active_badge = page.locator("text=/ACTIVE/i").first
+            expect(active_badge).to_be_visible()
+
+            # Click the Deactivate Pool button
+            deactivate_button = page.locator(
+                f'button.toggle-status-btn[data-pool-id="{pool_uuid}"]:has-text("Deactivate Pool")'
+            )
+            deactivate_button.click()
+
+            # Wait for API call to complete and pools to refresh
+            page.wait_for_timeout(3000)
+
+            # Verify pool status changed in database
+            with db_connection.connection:
+                with db_connection.connection.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT poolStatus FROM lfautomator.accessTokenPools WHERE pooluuid = %s",
+                        (pool_uuid,),
+                    )
+                    row = cursor.fetchone()
+                    assert row is not None, "Pool not found in database"
+                    assert row[0] == "inactive", "Pool status should be inactive"
+
+            # Verify UI updated - pool should now show INACTIVE badge
+            inactive_badge = page.locator("text=/INACTIVE/i").first
+            expect(inactive_badge).to_be_visible()
+
+        finally:
+            # Cleanup: Delete test pool
+            try:
+                with db_connection.connection:
+                    with db_connection.connection.cursor() as cursor:
+                        cursor.execute(
+                            "DELETE FROM lfautomator.accessTokenPools WHERE pooluuid = %s",
+                            (pool_uuid,),
+                        )
+            except Exception as e:
+                logger.error(f"Error cleaning up test pool: {e}")
+
+    def test_activate_button_shows_success_message(
+        self, page: Page, flask_server: dict, db_connection
+    ):
+        """Test that activating a pool shows a success message.
+
+        Validates: Requirements 9.5
+        """
+        base_url = flask_server["base_url"]
+        valid_key = flask_server["access_key"]
+
+        # Create an inactive pool
+        pool = TokenPool()
+        pool_uuid = pool.create_tokenpool(
+            token_count=20, pool_status="inactive", pool_priority=1
+        )
+
+        try:
+            # Login to access dashboard
+            page.goto(f"{base_url}/login")
+            access_key_input = page.locator('input[name="access_key"]')
+            access_key_input.fill(valid_key)
+            submit_button = page.locator('button[type="submit"]')
+            submit_button.click()
+
+            # Wait for navigation to dashboard
+            page.wait_for_url(f"{base_url}/")
+
+            # Click the Activate Pool button
+            activate_button = page.locator(
+                f'button.toggle-status-btn[data-pool-id="{pool_uuid}"]:has-text("Activate Pool")'
+            )
+            activate_button.click()
+
+            # Wait for API call to complete
+            page.wait_for_timeout(2000)
+
+            # Verify success message appears (check for message container visibility)
+            success_message = page.locator("#messageContainer")
+            expect(success_message).to_be_visible(timeout=5000)
+
+        finally:
+            # Cleanup: Delete test pool
+            try:
+                with db_connection.connection:
+                    with db_connection.connection.cursor() as cursor:
+                        cursor.execute(
+                            "DELETE FROM lfautomator.accessTokenPools WHERE pooluuid = %s",
+                            (pool_uuid,),
+                        )
+            except Exception as e:
+                logger.error(f"Error cleaning up test pool: {e}")

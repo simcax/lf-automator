@@ -7,7 +7,7 @@ Enhanced with multi-pool support for automatic pool switching and priority manag
 
 from typing import Dict, List, Optional
 
-from automator.database.db import Database
+from lf_automator.automator.database.db import Database
 
 
 class TokenPool:
@@ -86,6 +86,13 @@ class TokenPool:
                         "UPDATE lfautomator.accessTokenPools SET currentcount = currentcount + %s WHERE pooluuid = %s",
                         (token_count, self.pool_uuid),
                     )
+                    # Record history entry
+                    cursor.execute(
+                        """INSERT INTO lfautomator.accessTokenPoolsHistory 
+                           (poolUuid, accessTokenCount) 
+                           VALUES (%s, %s)""",
+                        (self.pool_uuid, token_count),
+                    )
         except Exception as error:
             raise (ValueError(f"Error adding tokens to token pool: {error}"))
         self.current_token_count += token_count
@@ -102,6 +109,13 @@ class TokenPool:
                     cursor.execute(
                         "UPDATE lfautomator.accessTokenPools SET currentcount = currentcount - %s WHERE pooluuid = %s",
                         (token_count, self.pool_uuid),
+                    )
+                    # Record the transaction in history (negative for withdrawal)
+                    cursor.execute(
+                        """INSERT INTO lfautomator.accessTokenPoolsHistory 
+                           (poolUuid, accessTokenCount) 
+                           VALUES (%s, %s)""",
+                        (self.pool_uuid, -token_count),
                     )
         except Exception as error:
             raise (ValueError(f"Error removing tokens from token pool: {error}"))
@@ -233,41 +247,49 @@ class TokenPool:
         remaining_to_distribute = count
 
         try:
-            with self.db.connection.cursor() as cursor:
-                while remaining_to_distribute > 0:
-                    # Pass cursor to avoid nested connection context
-                    primary_pool = self.get_primary_pool(cursor=cursor)
-                    if not primary_pool:
-                        self.db.connection.rollback()
-                        return False
+            with self.db.connection:
+                with self.db.connection.cursor() as cursor:
+                    while remaining_to_distribute > 0:
+                        # Pass cursor to avoid nested connection context
+                        primary_pool = self.get_primary_pool(cursor=cursor)
+                        if not primary_pool:
+                            self.db.connection.rollback()
+                            return False
 
-                    pool_uuid = primary_pool["pool_uuid"]
-                    available_in_pool = primary_pool["current_count"]
+                        pool_uuid = primary_pool["pool_uuid"]
+                        available_in_pool = primary_pool["current_count"]
 
-                    # Distribute from this pool
-                    tokens_from_this_pool = min(
-                        remaining_to_distribute, available_in_pool
-                    )
-
-                    cursor.execute(
-                        """UPDATE lfautomator.accessTokenPools 
-                           SET currentcount = currentcount - %s 
-                           WHERE pooluuid = %s""",
-                        (tokens_from_this_pool, pool_uuid),
-                    )
-
-                    remaining_to_distribute -= tokens_from_this_pool
-
-                    # If pool is now empty, mark it as depleted
-                    if tokens_from_this_pool == available_in_pool:
-                        cursor.execute(
-                            """UPDATE lfautomator.accessTokenPools 
-                               SET poolStatus = 'depleted' 
-                               WHERE pooluuid = %s""",
-                            (pool_uuid,),
+                        # Distribute from this pool
+                        tokens_from_this_pool = min(
+                            remaining_to_distribute, available_in_pool
                         )
 
-                self.db.connection.commit()
+                        cursor.execute(
+                            """UPDATE lfautomator.accessTokenPools 
+                               SET currentcount = currentcount - %s 
+                               WHERE pooluuid = %s""",
+                            (tokens_from_this_pool, pool_uuid),
+                        )
+
+                        # Record the distribution in history (negative for withdrawal)
+                        cursor.execute(
+                            """INSERT INTO lfautomator.accessTokenPoolsHistory 
+                               (poolUuid, accessTokenCount) 
+                               VALUES (%s, %s)""",
+                            (pool_uuid, -tokens_from_this_pool),
+                        )
+
+                        remaining_to_distribute -= tokens_from_this_pool
+
+                        # If pool is now empty, mark it as depleted
+                        if tokens_from_this_pool == available_in_pool:
+                            cursor.execute(
+                                """UPDATE lfautomator.accessTokenPools 
+                                   SET poolStatus = 'depleted' 
+                                   WHERE pooluuid = %s""",
+                                (pool_uuid,),
+                            )
+
                 return True
         except Exception as error:
             self.db.connection.rollback()

@@ -5,7 +5,7 @@ import time
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from automator.tokenregistry.registry import TokenRegistry
+from lf_automator.automator.tokenregistry.registry import TokenRegistry
 from foreninglet_data.api import ForeningLet
 from foreninglet_data.memberlist import Memberlist
 

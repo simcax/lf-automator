@@ -3,8 +3,8 @@
 from datetime import datetime
 
 import pytest
-from automator.counttimestamp import CountTimestampManager
-from automator.database.db import Database
+from lf_automator.automator.counttimestamp import CountTimestampManager
+from lf_automator.automator.database.db import Database
 from dotenv import load_dotenv
 
 # Load environment variables

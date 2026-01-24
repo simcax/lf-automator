@@ -3,7 +3,7 @@
 import random
 
 import pytest
-from automator.automation import Automator
+from lf_automator.automator.automation import Automator
 from dotenv import load_dotenv
 from foreninglet_data.api import ForeningLet
 from foreninglet_data.memberlist import Memberlist

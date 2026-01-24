@@ -4,7 +4,8 @@ from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-from automator.scheduler.scheduler import DailyScheduler
+
+from lf_automator.automator.scheduler.scheduler import DailyScheduler
 
 
 class TestDailyScheduler:
@@ -39,7 +40,7 @@ class TestDailyScheduler:
     def scheduler(self, mock_automator, schedule_config):
         """Create a DailyScheduler instance."""
         with patch(
-            "automator.scheduler.scheduler.CountTimestampManager"
+            "lf_automator.automator.scheduler.scheduler.CountTimestampManager"
         ) as mock_timestamp:
             mock_timestamp.return_value = MagicMock()
             return DailyScheduler(mock_automator, schedule_config)
@@ -81,7 +82,7 @@ class TestDailyScheduler:
         """Test scheduler doesn't start when disabled in config."""
         config = {"cron": "0 9 * * *", "enabled": False}
         with patch(
-            "automator.scheduler.scheduler.CountTimestampManager"
+            "lf_automator.automator.scheduler.scheduler.CountTimestampManager"
         ) as mock_timestamp:
             mock_timestamp.return_value = MagicMock()
             scheduler = DailyScheduler(mock_automator, config)
@@ -92,7 +93,7 @@ class TestDailyScheduler:
         """Test starting scheduler with invalid cron expression."""
         config = {"cron": "invalid cron", "enabled": True}
         with patch(
-            "automator.scheduler.scheduler.CountTimestampManager"
+            "lf_automator.automator.scheduler.scheduler.CountTimestampManager"
         ) as mock_timestamp:
             mock_timestamp.return_value = MagicMock()
             scheduler = DailyScheduler(mock_automator, config)
@@ -188,7 +189,7 @@ class TestDailyScheduler:
         for cron in test_cases:
             config = {"cron": cron, "enabled": True}
             with patch(
-                "automator.scheduler.scheduler.CountTimestampManager"
+                "lf_automator.automator.scheduler.scheduler.CountTimestampManager"
             ) as mock_timestamp:
                 mock_timestamp.return_value = MagicMock()
                 scheduler = DailyScheduler(mock_automator, config)

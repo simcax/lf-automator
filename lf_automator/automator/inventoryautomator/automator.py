@@ -4,14 +4,14 @@ import logging
 from datetime import datetime
 from typing import Dict, Optional
 
-from automator.alertmanager.alert import AlertManager
-from automator.config.loader import ConfigLoader
-from automator.counttimestamp.timestamp import CountTimestampManager
-from automator.database.db import Database
-from automator.mailer.send import Mailer
-from automator.membersync.sync import MemberTokenSync
-from automator.tokenpools.pools import TokenPool
-from automator.tokenregistry.registry import TokenRegistry
+from lf_automator.automator.alertmanager.alert import AlertManager
+from lf_automator.automator.config.loader import ConfigLoader
+from lf_automator.automator.counttimestamp.timestamp import CountTimestampManager
+from lf_automator.automator.database.db import Database
+from lf_automator.automator.mailer.send import Mailer
+from lf_automator.automator.membersync.sync import MemberTokenSync
+from lf_automator.automator.tokenpools.pools import TokenPool
+from lf_automator.automator.tokenregistry.registry import TokenRegistry
 
 logger = logging.getLogger(__name__)
 

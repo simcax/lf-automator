@@ -1,9 +1,9 @@
 """Route handlers for the web dashboard."""
 
-from automator.tokenpools.pools import TokenPool
+from lf_automator.automator.tokenpools.pools import TokenPool
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from loguru import logger
-from webapp.auth import check_access_key, clear_session, require_auth, set_authenticated
+from lf_automator.webapp.auth import check_access_key, clear_session, require_auth, set_authenticated
 
 bp = Blueprint("main", __name__)
 
@@ -170,13 +170,13 @@ def get_pools():
         return jsonify({"error": "Unable to fetch token pools"}), 500
 
 
-@bp.route("/api/pools/<pool_id>/activate", methods=["POST"])
+@bp.route("/api/pools/<pool_id>/toggle-status", methods=["POST"])
 @require_auth
-def activate_pool(pool_id):
-    """Activate a token pool.
+def toggle_pool_status(pool_id):
+    """Toggle a token pool's status between active and inactive.
 
     Args:
-        pool_id: UUID of the pool to activate
+        pool_id: UUID of the pool to toggle
 
     Returns:
         JSON response with success status or error message
@@ -185,7 +185,7 @@ def activate_pool(pool_id):
         # Create TokenPool instance to access database methods
         token_pool = TokenPool()
 
-        # Verify pool exists
+        # Verify pool exists and get current status
         with token_pool.db.connection:
             with token_pool.db.connection.cursor() as cursor:
                 cursor.execute(
@@ -201,26 +201,30 @@ def activate_pool(pool_id):
 
                 current_status = row[1]
 
-                # Update pool status to active
+                # Toggle status
+                new_status = "inactive" if current_status == "active" else "active"
+
+                # Update pool status
                 cursor.execute(
                     """UPDATE lfautomator.accessTokenPools 
-                       SET poolStatus = 'active' 
+                       SET poolStatus = %s 
                        WHERE pooluuid = %s""",
-                    (pool_id,),
+                    (new_status, pool_id),
                 )
 
         return jsonify(
             {
                 "success": True,
-                "message": "Pool activated successfully",
+                "message": f"Pool {new_status} successfully",
                 "pool_id": str(pool_id),
                 "previous_status": current_status,
+                "new_status": new_status,
             }
         )
 
     except Exception as error:
-        logger.error(f"Error activating pool {pool_id}: {error}")
-        return jsonify({"error": "Unable to activate pool"}), 500
+        logger.error(f"Error toggling pool status {pool_id}: {error}")
+        return jsonify({"error": "Unable to toggle pool status"}), 500
 
 
 @bp.route("/api/pools/<pool_id>/transaction", methods=["POST"])
@@ -311,6 +315,15 @@ def pool_transaction(pool_id):
                        SET currentcount = %s 
                        WHERE pooluuid = %s""",
                     (new_count, pool_id),
+                )
+
+                # Record the transaction in history
+                history_count = count if transaction_type == "deposit" else -count
+                cursor.execute(
+                    """INSERT INTO lfautomator.accessTokenPoolsHistory 
+                       (poolUuid, accessTokenCount) 
+                       VALUES (%s, %s)""",
+                    (pool_id, history_count),
                 )
 
                 # Fetch updated pool data
@@ -419,6 +432,67 @@ def create_pool():
     except Exception as error:
         logger.error(f"Error creating token pool: {error}")
         return jsonify({"error": "Unable to create token pool"}), 500
+
+
+@bp.route("/api/pools/<pool_id>/history", methods=["GET"])
+@require_auth
+def get_pool_history(pool_id):
+    """Get the transaction history for a token pool.
+
+    Args:
+        pool_id: UUID of the pool
+
+    Returns:
+        JSON response with history records or error message
+    """
+    try:
+        # Create TokenPool instance to access database methods
+        token_pool = TokenPool()
+
+        # Verify pool exists
+        with token_pool.db.connection:
+            with token_pool.db.connection.cursor() as cursor:
+                cursor.execute(
+                    """SELECT pooluuid 
+                       FROM lfautomator.accessTokenPools 
+                       WHERE pooluuid = %s""",
+                    (pool_id,),
+                )
+                row = cursor.fetchone()
+
+                if not row:
+                    return jsonify({"error": "Pool not found"}), 404
+
+                # Get history records for this pool
+                cursor.execute(
+                    """SELECT historyUuid, changeDate, accessTokenCount
+                       FROM lfautomator.accessTokenPoolsHistory 
+                       WHERE poolUuid = %s 
+                       ORDER BY changeDate DESC 
+                       LIMIT 50""",
+                    (pool_id,),
+                )
+                history_rows = cursor.fetchall()
+
+                history = []
+                for hist_row in history_rows:
+                    history.append(
+                        {
+                            "history_uuid": str(hist_row[0]),
+                            "change_date": (
+                                hist_row[1].strftime("%Y-%m-%d %H:%M:%S")
+                                if hist_row[1]
+                                else None
+                            ),
+                            "token_count": hist_row[2],
+                        }
+                    )
+
+        return jsonify({"pool_id": str(pool_id), "history": history})
+
+    except Exception as error:
+        logger.error(f"Error fetching pool history {pool_id}: {error}")
+        return jsonify({"error": "Unable to fetch pool history"}), 500
 
 
 @bp.route("/health", methods=["GET"])

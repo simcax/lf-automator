@@ -18,9 +18,9 @@ import sys
 from datetime import datetime
 from typing import Optional
 
-from automator.config.loader import ConfigLoader
-from automator.inventoryautomator.automator import TokenInventoryAutomator
-from automator.scheduler.scheduler import DailyScheduler
+from lf_automator.automator.config.loader import ConfigLoader
+from lf_automator.automator.inventoryautomator.automator import TokenInventoryAutomator
+from lf_automator.automator.scheduler.scheduler import DailyScheduler
 
 # Configure logging
 logging.basicConfig(

@@ -69,7 +69,7 @@
 <!-- Token Pool Cards Grid -->
 <div id="poolsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 {% if pools is not defined or pools|length == 0 %}hidden{% endif %}">
     {% for pool in pools %}
-    <div class="pool-card bg-white border {% if pool.pool_status == 'inactive' %}border-gray-400 opacity-75{% else %}border-gray-200{% endif %} rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden">
+    <div class="pool-card bg-white border {% if pool.pool_status == 'inactive' %}border-gray-400 bg-gray-50{% else %}border-gray-200{% endif %} rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden">
         <!-- Card Header with Status Badge -->
         <div class="p-6 pb-4">
             <div class="flex justify-between items-start mb-4">
@@ -189,7 +189,7 @@
             {% if pool.pool_status == 'inactive' %}
             <!-- Activation Button for Inactive Pools -->
             <button 
-                class="activate-pool-btn w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+                class="toggle-status-btn w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
                 data-pool-id="{{ pool.pool_uuid }}"
             >
                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -200,7 +200,7 @@
             {% else %}
             <!-- Regular Action Buttons for Active Pools -->
             <div class="flex space-x-2">
-                <button class="flex-1 inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                <button class="view-details-btn flex-1 inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors" data-pool-id="{{ pool.pool_uuid }}">
                     <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -214,6 +214,15 @@
                     Deposit/Withdraw
                 </button>
             </div>
+            <button 
+                class="toggle-status-btn w-full mt-2 inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                data-pool-id="{{ pool.pool_uuid }}"
+            >
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+                </svg>
+                Deactivate Pool
+            </button>
             {% endif %}
         </div>
     </div>

@@ -1,5 +1,5 @@
 """Token Registry module for tracking member token assignments."""
 
-from automator.tokenregistry.registry import TokenRegistry
+from lf_automator.automator.tokenregistry.registry import TokenRegistry
 
 __all__ = ["TokenRegistry"]

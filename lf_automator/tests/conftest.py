@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 import pytest
-from automator.database.db import Database
+from lf_automator.automator.database.db import Database
 from dotenv import load_dotenv
 from testcontainers.postgres import PostgresContainer
 

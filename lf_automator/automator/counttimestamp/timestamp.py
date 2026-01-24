@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from automator.database.db import Database
+from lf_automator.automator.database.db import Database
 
 
 class CountTimestampManager:

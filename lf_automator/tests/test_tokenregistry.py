@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 
 import pytest
-from automator.tokenregistry import TokenRegistry
+from lf_automator.automator.tokenregistry import TokenRegistry
 
 
 @pytest.mark.integration

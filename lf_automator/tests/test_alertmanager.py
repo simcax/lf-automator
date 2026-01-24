@@ -4,9 +4,9 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from automator.alertmanager import AlertManager
-from automator.database.db import Database
-from automator.mailer.send import Mailer
+from lf_automator.automator.alertmanager import AlertManager
+from lf_automator.automator.database.db import Database
+from lf_automator.automator.mailer.send import Mailer
 from dotenv import load_dotenv
 
 # Load environment variables

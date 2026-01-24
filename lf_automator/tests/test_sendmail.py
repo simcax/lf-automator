@@ -3,7 +3,7 @@
 from unittest.mock import patch
 
 import pytest
-from automator.mailer.send import Mailer
+from lf_automator.automator.mailer.send import Mailer
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -29,7 +29,7 @@ def test_sending_email_with_mock():
     mailer = Mailer(
         sender="someone@example.com", subject="Test email from LF Automator"
     )
-    with patch("automator.mailer.send.SendGridAPIClient") as mock:
+    with patch("lf_automator.automator.mailer.send.SendGridAPIClient") as mock:
         assert (
             mailer.send_email(
                 "Tester lige mailafsendelse fra LF Automator",

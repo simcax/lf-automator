@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
 import pytest
-from automator.membersync.sync import MemberTokenSync
-from automator.tokenregistry.registry import TokenRegistry
+from lf_automator.automator.membersync.sync import MemberTokenSync
+from lf_automator.automator.tokenregistry.registry import TokenRegistry
 
 
 @pytest.fixture
@@ -80,7 +80,7 @@ def test_membersync_custom_initialization(mock_api_client, mock_registry):
     assert sync.initial_backoff == 0.5
 
 
-@patch("automator.membersync.sync.Memberlist")
+@patch("lf_automator.automator.membersync.sync.Memberlist")
 def test_fetch_members_with_tokens(
     mock_memberlist_class, mock_api_client, sample_memberlist
 ):
@@ -104,7 +104,7 @@ def test_fetch_members_with_tokens(
     assert result[1]["token_number"] == "TOKEN002"
 
 
-@patch("automator.membersync.sync.Memberlist")
+@patch("lf_automator.automator.membersync.sync.Memberlist")
 def test_fetch_members_with_tokens_filters_empty(
     mock_memberlist_class, mock_api_client, sample_memberlist
 ):
@@ -124,8 +124,8 @@ def test_fetch_members_with_tokens_filters_empty(
     assert "523e4567-e89b-12d3-a456-426614174004" not in member_uuids  # Whitespace
 
 
-@patch("automator.membersync.sync.Memberlist")
-@patch("automator.membersync.sync.time.sleep")
+@patch("lf_automator.automator.membersync.sync.Memberlist")
+@patch("lf_automator.automator.membersync.sync.time.sleep")
 def test_fetch_members_with_retry_logic(
     mock_sleep, mock_memberlist_class, mock_api_client, sample_memberlist
 ):
@@ -156,7 +156,7 @@ def test_fetch_members_with_retry_logic(
     mock_sleep.assert_any_call(0.2)
 
 
-@patch("automator.membersync.sync.Memberlist")
+@patch("lf_automator.automator.membersync.sync.Memberlist")
 def test_fetch_members_max_retries_exceeded(mock_memberlist_class, mock_api_client):
     """Test that RuntimeError is raised after max retries."""
     mock_api_client.get_memberlist.side_effect = Exception("Network error")
@@ -203,7 +203,7 @@ def test_is_valid_token_number():
     assert sync._is_valid_token_number("A" * 51) is False  # Too long
 
 
-@patch("automator.membersync.sync.Memberlist")
+@patch("lf_automator.automator.membersync.sync.Memberlist")
 def test_sync_to_registry(
     mock_memberlist_class, mock_api_client, mock_registry, sample_memberlist
 ):
@@ -227,7 +227,7 @@ def test_sync_to_registry(
     assert mock_registry.register_member_token.call_count == 2
 
 
-@patch("automator.membersync.sync.Memberlist")
+@patch("lf_automator.automator.membersync.sync.Memberlist")
 def test_sync_to_registry_handles_errors(
     mock_memberlist_class, mock_api_client, mock_registry, sample_memberlist
 ):

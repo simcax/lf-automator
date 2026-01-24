@@ -3,7 +3,7 @@
 import os
 from unittest.mock import patch
 
-from automator.config import ConfigLoader
+from lf_automator.automator.config import ConfigLoader
 
 
 class TestConfigLoader:
@@ -118,13 +118,13 @@ class TestConfigLoader:
     def test_database_config_loading(self):
         """Test database configuration loading."""
         env = {
-            "DB_HOST": "testhost",
-            "DB_PORT": "5433",
-            "DB_NAME": "testdb",
-            "DB_USERNAME": "testuser",
-            "DB_PASSWORD": "testpass",
+            "POSTGRESQL_ADDON_HOST": "testhost",
+            "POSTGRESQL_ADDON_PORT": "5433",
+            "POSTGRESQL_ADDON_DB": "testdb",
+            "POSTGRESQL_ADDON_USER": "testuser",
+            "POSTGRESQL_ADDON_PASSWORD": "testpass",
         }
-        with patch.dict(os.environ, env):
+        with patch.dict(os.environ, env, clear=True):
             config = ConfigLoader.load_config()
             db_config = config["database"]
 

@@ -128,7 +128,7 @@ function createPoolCard(pool) {
     if (pool.pool_status === 'inactive') {
         actionButtons = `
             <button 
-                class="activate-pool-btn w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+                class="toggle-status-btn w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
                 data-pool-id="${pool.pool_uuid}"
             >
                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -140,7 +140,7 @@ function createPoolCard(pool) {
     } else {
         actionButtons = `
             <div class="flex space-x-2">
-                <button class="flex-1 inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                <button class="view-details-btn flex-1 inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors" data-pool-id="${pool.pool_uuid}">
                     <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -154,15 +154,24 @@ function createPoolCard(pool) {
                     Deposit/Withdraw
                 </button>
             </div>
+            <button 
+                class="toggle-status-btn w-full mt-2 inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                data-pool-id="${pool.pool_uuid}"
+            >
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+                </svg>
+                Deactivate Pool
+            </button>
         `;
     }
     
-    // Apply opacity for inactive pools
-    const cardOpacity = pool.pool_status === 'inactive' ? 'opacity-75' : '';
+    // Apply different background for inactive pools
+    const bgClass = pool.pool_status === 'inactive' ? 'bg-gray-50' : 'bg-white';
     const borderClass = pool.pool_status === 'inactive' ? 'border-gray-400' : 'border-gray-200';
     
     return `
-        <div class="pool-card bg-white border ${borderClass} ${cardOpacity} rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200">
+        <div class="pool-card ${bgClass} border ${borderClass} rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200">
             <div class="p-6">
                 <!-- Pool Name -->
                 <h3 class="text-lg font-semibold text-gray-900 mb-2">Pool #${pool.pool_uuid.substring(0, 8)}</h3>
@@ -229,13 +238,24 @@ function updatePoolsDisplay(pools) {
             poolsContainer.classList.remove('hidden');
             poolsContainer.innerHTML = pools.map(pool => createPoolCard(pool)).join('');
             
-            // Re-attach event listeners to activation buttons after DOM update
-            const activateButtons = document.querySelectorAll('.activate-pool-btn');
-            activateButtons.forEach(button => {
+            // Re-attach event listeners to toggle status buttons after DOM update
+            const toggleStatusButtons = document.querySelectorAll('.toggle-status-btn');
+            toggleStatusButtons.forEach(button => {
                 button.addEventListener('click', function() {
                     const poolId = this.getAttribute('data-pool-id');
                     if (poolId) {
-                        activatePool(poolId);
+                        togglePoolStatus(poolId);
+                    }
+                });
+            });
+            
+            // Re-attach event listeners to view details buttons after DOM update
+            const viewDetailsButtons = document.querySelectorAll('.view-details-btn');
+            viewDetailsButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const poolId = this.getAttribute('data-pool-id');
+                    if (poolId) {
+                        showPoolDetails(poolId);
                     }
                 });
             });
@@ -450,13 +470,13 @@ async function createNewPool() {
 }
 
 /**
- * Activate a token pool
- * @param {string} poolId - UUID of the pool to activate
+ * Toggle a token pool's status between active and inactive
+ * @param {string} poolId - UUID of the pool to toggle
  */
-async function activatePool(poolId) {
+async function togglePoolStatus(poolId) {
     try {
-        // Send POST request to activate pool
-        const response = await fetch(`/api/pools/${poolId}/activate`, {
+        // Send POST request to toggle pool status
+        const response = await fetch(`/api/pools/${poolId}/toggle-status`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -466,18 +486,116 @@ async function activatePool(poolId) {
         const data = await response.json();
         
         if (!response.ok) {
-            throw new Error(data.error || 'Failed to activate pool');
+            throw new Error(data.error || 'Failed to toggle pool status');
         }
         
         // Show success message
-        showMessage('Pool activated successfully', 'success');
+        showMessage(data.message || 'Pool status updated successfully', 'success');
         
         // Refresh the pools display to show updated status
         await refreshPools();
         
     } catch (error) {
-        console.error('Error activating pool:', error);
-        showMessage(error.message || 'Failed to activate pool. Please try again.', 'error');
+        console.error('Error toggling pool status:', error);
+        showMessage(error.message || 'Failed to toggle pool status. Please try again.', 'error');
+    }
+}
+
+/**
+ * Show modal dialog with pool history details
+ * @param {string} poolId - UUID of the pool to view
+ */
+async function showPoolDetails(poolId) {
+    try {
+        // Fetch pool history
+        const response = await fetch(`/api/pools/${poolId}/history`);
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch pool history');
+        }
+        
+        const data = await response.json();
+        
+        // Create history table HTML
+        let historyHTML = '';
+        if (data.history && data.history.length > 0) {
+            historyHTML = `
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Token Count</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            ${data.history.map(record => `
+                                <tr>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">${record.change_date}</td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">${record.token_count}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } else {
+            historyHTML = '<p class="text-sm text-gray-500 text-center py-4">No history records found for this pool.</p>';
+        }
+        
+        // Create modal HTML
+        const modalHTML = `
+            <div id="poolDetailsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+                    <div class="mt-3">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-medium leading-6 text-gray-900">Pool History</h3>
+                            <button id="closeDetailsButton" class="text-gray-400 hover:text-gray-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="mb-4">
+                            <p class="text-sm text-gray-600">Pool ID: <span class="font-mono text-gray-900">${poolId.substring(0, 8)}...</span></p>
+                        </div>
+                        ${historyHTML}
+                        <div class="mt-4 flex justify-end">
+                            <button 
+                                id="closeDetailsButtonBottom"
+                                class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add modal to page
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        // Attach event listeners
+        const modal = document.getElementById('poolDetailsModal');
+        const closeButton = document.getElementById('closeDetailsButton');
+        const closeButtonBottom = document.getElementById('closeDetailsButtonBottom');
+        
+        const closeModal = () => modal.remove();
+        
+        closeButton.addEventListener('click', closeModal);
+        closeButtonBottom.addEventListener('click', closeModal);
+        
+        // Close modal on background click
+        modal.addEventListener('click', (e) => {
+            if (e.target.id === 'poolDetailsModal') {
+                closeModal();
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error showing pool details:', error);
+        showMessage(error.message || 'Failed to load pool details. Please try again.', 'error');
     }
 }
 
@@ -610,13 +728,24 @@ function init() {
         newPoolButton.addEventListener('click', showNewPoolModal);
     }
     
-    // Attach click handlers to activation buttons
-    const activateButtons = document.querySelectorAll('.activate-pool-btn');
-    activateButtons.forEach(button => {
+    // Attach click handlers to toggle status buttons
+    const toggleStatusButtons = document.querySelectorAll('.toggle-status-btn');
+    toggleStatusButtons.forEach(button => {
         button.addEventListener('click', function() {
             const poolId = this.getAttribute('data-pool-id');
             if (poolId) {
-                activatePool(poolId);
+                togglePoolStatus(poolId);
+            }
+        });
+    });
+    
+    // Attach click handlers to view details buttons
+    const viewDetailsButtons = document.querySelectorAll('.view-details-btn');
+    viewDetailsButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const poolId = this.getAttribute('data-pool-id');
+            if (poolId) {
+                showPoolDetails(poolId);
             }
         });
     });

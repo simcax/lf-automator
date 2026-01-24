@@ -3,8 +3,9 @@
 import os
 
 import pytest
-from webapp.app import create_app
-from webapp.auth import (
+
+from lf_automator.webapp.app import create_app
+from lf_automator.webapp.auth import (
     check_access_key,
     clear_session,
     is_authenticated,
@@ -20,7 +21,7 @@ class TestApplicationFactory:
         """Test that create_app returns a Flask application instance."""
         app = create_app()
         assert app is not None
-        assert app.name == "webapp.app"
+        assert app.name == "lf_automator.webapp.app"
 
     def test_configuration_loading_from_environment(self):
         """Test that configuration is loaded from environment variables."""
@@ -135,7 +136,7 @@ class TestApplicationFactory:
             from flask import current_app
 
             assert current_app is not None
-            assert current_app.name == "webapp.app"
+            assert current_app.name == "lf_automator.webapp.app"
 
     def test_test_client_available(self):
         """Test that test client can be created."""
@@ -560,7 +561,7 @@ class TestDashboardRoute:
     @pytest.mark.integration
     def test_dashboard_displays_all_pools_from_database(self, db_connection):
         """Test that dashboard displays all token pools from the database."""
-        from automator.tokenpools.pools import TokenPool
+        from lf_automator.automator.tokenpools.pools import TokenPool
 
         # Create test token pools
         pool1 = TokenPool()
@@ -603,7 +604,7 @@ class TestDashboardRoute:
 
     def test_state_calculation_function_critical(self):
         """Test that get_pool_state returns 'critical' for pools at or below critical threshold."""
-        from webapp.routes import get_pool_state
+        from lf_automator.webapp.routes import get_pool_state
 
         # Test critical state (5 or fewer tokens)
         assert get_pool_state({"current_count": 0}) == "critical"
@@ -612,7 +613,7 @@ class TestDashboardRoute:
 
     def test_state_calculation_function_warning(self):
         """Test that get_pool_state returns 'warning' for pools at or below warning threshold."""
-        from webapp.routes import get_pool_state
+        from lf_automator.webapp.routes import get_pool_state
 
         # Test warning state (6-10 tokens)
         assert get_pool_state({"current_count": 6}) == "warning"
@@ -621,7 +622,7 @@ class TestDashboardRoute:
 
     def test_state_calculation_function_normal(self):
         """Test that get_pool_state returns 'normal' for pools above warning threshold."""
-        from webapp.routes import get_pool_state
+        from lf_automator.webapp.routes import get_pool_state
 
         # Test normal state (more than 10 tokens)
         assert get_pool_state({"current_count": 11}) == "normal"
@@ -630,7 +631,7 @@ class TestDashboardRoute:
 
     def test_state_calculation_function_with_missing_count(self):
         """Test that get_pool_state handles missing current_count gracefully."""
-        from webapp.routes import get_pool_state
+        from lf_automator.webapp.routes import get_pool_state
 
         # Test with missing current_count (should default to 0, which is critical)
         assert get_pool_state({}) == "critical"
@@ -676,7 +677,7 @@ class TestDashboardRoute:
                 sess["authenticated"] = True
 
             # Mock TokenPool to raise an exception
-            with patch("webapp.routes.TokenPool") as mock_token_pool:
+            with patch("lf_automator.webapp.routes.TokenPool") as mock_token_pool:
                 mock_instance = MagicMock()
                 mock_instance.db.connection.__enter__.side_effect = Exception(
                     "Database connection failed"
@@ -698,7 +699,7 @@ class TestDashboardRoute:
     @pytest.mark.integration
     def test_dashboard_calculates_state_for_each_pool(self, db_connection):
         """Test that dashboard calculates and includes state for each pool."""
-        from automator.tokenpools.pools import TokenPool
+        from lf_automator.automator.tokenpools.pools import TokenPool
 
         # Create pools in different states
         pool_normal = TokenPool()
@@ -748,7 +749,7 @@ class TestDashboardRoute:
     @pytest.mark.integration
     def test_dashboard_orders_pools_by_priority(self, db_connection):
         """Test that dashboard displays pools ordered by priority."""
-        from automator.tokenpools.pools import TokenPool
+        from lf_automator.automator.tokenpools.pools import TokenPool
 
         # Create pools with explicit priorities
         pool3 = TokenPool()
@@ -786,7 +787,7 @@ class TestDepositWithdrawEndpoint:
     @pytest.mark.integration
     def test_deposit_increases_pool_count(self, db_connection):
         """Test that deposit transaction increases pool count."""
-        from automator.tokenpools.pools import TokenPool
+        from lf_automator.automator.tokenpools.pools import TokenPool
 
         # Create a pool
         pool = TokenPool()
@@ -816,7 +817,7 @@ class TestDepositWithdrawEndpoint:
     @pytest.mark.integration
     def test_withdraw_decreases_pool_count(self, db_connection):
         """Test that withdraw transaction decreases pool count."""
-        from automator.tokenpools.pools import TokenPool
+        from lf_automator.automator.tokenpools.pools import TokenPool
 
         # Create a pool
         pool = TokenPool()
@@ -846,7 +847,7 @@ class TestDepositWithdrawEndpoint:
     @pytest.mark.integration
     def test_withdraw_prevents_negative_count(self, db_connection):
         """Test that withdraw transaction prevents negative counts."""
-        from automator.tokenpools.pools import TokenPool
+        from lf_automator.automator.tokenpools.pools import TokenPool
 
         # Create a pool with 5 tokens
         pool = TokenPool()
@@ -876,7 +877,7 @@ class TestDepositWithdrawEndpoint:
     @pytest.mark.integration
     def test_transaction_requires_authentication(self, db_connection):
         """Test that transaction endpoint requires authentication."""
-        from automator.tokenpools.pools import TokenPool
+        from lf_automator.automator.tokenpools.pools import TokenPool
 
         # Create a pool
         pool = TokenPool()
@@ -899,7 +900,7 @@ class TestDepositWithdrawEndpoint:
     @pytest.mark.integration
     def test_transaction_validates_transaction_type(self, db_connection):
         """Test that transaction endpoint validates transaction type."""
-        from automator.tokenpools.pools import TokenPool
+        from lf_automator.automator.tokenpools.pools import TokenPool
 
         # Create a pool
         pool = TokenPool()
@@ -929,7 +930,7 @@ class TestDepositWithdrawEndpoint:
     @pytest.mark.integration
     def test_transaction_validates_count(self, db_connection):
         """Test that transaction endpoint validates count."""
-        from automator.tokenpools.pools import TokenPool
+        from lf_automator.automator.tokenpools.pools import TokenPool
 
         # Create a pool
         pool = TokenPool()

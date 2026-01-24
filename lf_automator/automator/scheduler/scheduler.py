@@ -6,8 +6,8 @@ from typing import Dict, List, Optional
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from automator.counttimestamp.timestamp import CountTimestampManager
-from automator.inventoryautomator.automator import TokenInventoryAutomator
+from lf_automator.automator.counttimestamp.timestamp import CountTimestampManager
+from lf_automator.automator.inventoryautomator.automator import TokenInventoryAutomator
 
 logger = logging.getLogger(__name__)
 
