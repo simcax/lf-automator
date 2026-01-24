@@ -38,7 +38,7 @@ jobs:
           fi
 
       - name: Run Flyway migrations
-        uses: docker://flyway/flyway:10-alpine
+        uses: docker://flyway/flyway:11-alpine
         env:
           FLYWAY_URL: ${{ secrets.DB_URL }}
           FLYWAY_USER: ${{ secrets.DB_USERNAME }}
@@ -57,7 +57,7 @@ jobs:
             migrate
 
       - name: Flyway info
-        uses: docker://flyway/flyway:10-alpine
+        uses: docker://flyway/flyway:11-alpine
         env:
           FLYWAY_URL: ${{ secrets.DB_URL }}
           FLYWAY_USER: ${{ secrets.DB_USERNAME }}
