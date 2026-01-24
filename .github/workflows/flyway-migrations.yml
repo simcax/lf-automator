@@ -40,18 +40,18 @@ jobs:
       - name: Run Flyway migrations
         uses: docker://flyway/flyway:11-alpine
         env:
-          FLYWAY_URL: ${{ secrets.DB_URL }}
-          FLYWAY_USER: ${{ secrets.DB_USERNAME }}
-          FLYWAY_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          FLYWAY_URL: ${{ secrets.POSTGRESQL_ADDON_HOST }}
+          FLYWAY_USER: ${{ secrets.POSTGRESQL_ADDON_USER }}
+          FLYWAY_PASSWORD: ${{ secrets.POSTGRESQL_ADDON_PASSWORD }}
           FLYWAY_SCHEMAS: lfautomator
           FLYWAY_VALIDATE_MIGRATION_NAMING: true
           FLYWAY_MIXED: true
           FLYWAY_OUT_OF_ORDER: true
         with:
           args: >-
-            -url=${{ secrets.DB_URL }}
-            -user=${{ secrets.DB_USERNAME }}
-            -password=${{ secrets.DB_PASSWORD }}
+            -url=${{ secrets.POSTGRESQL_ADDON_HOST }}
+            -user=${{ secrets.POSTGRESQL_ADDON_USER }}
+            -password=${{ secrets.POSTGRESQL_ADDON_PASSWORD }}
             -schemas=lfautomator
             -locations=filesystem:/github/workspace/lf_automator/db-automator/migrations
             migrate
@@ -59,15 +59,15 @@ jobs:
       - name: Flyway info
         uses: docker://flyway/flyway:11-alpine
         env:
-          FLYWAY_URL: ${{ secrets.DB_URL }}
-          FLYWAY_USER: ${{ secrets.DB_USERNAME }}
-          FLYWAY_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          FLYWAY_URL: ${{ secrets.POSTGRESQL_ADDON_HOST }}
+          FLYWAY_USER: ${{ secrets.POSTGRESQL_ADDON_USER }}
+          FLYWAY_PASSWORD: ${{ secrets.POSTGRESQL_ADDON_PASSWORD }}
           FLYWAY_SCHEMAS: lfautomator
         with:
           args: >-
-            -url=${{ secrets.DB_URL }}
-            -user=${{ secrets.DB_USERNAME }}
-            -password=${{ secrets.DB_PASSWORD }}
+            -url=${{ secrets.POSTGRESQL_ADDON_HOST }}
+            -user=${{ secrets.POSTGRESQL_ADDON_USER }}
+            -password=${{ secrets.POSTGRESQL_ADDON_PASSWORD }}
             -schemas=lfautomator
             -locations=filesystem:/github/workspace/lf_automator/db-automator/migrations
             info
