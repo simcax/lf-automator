@@ -983,3 +983,56 @@ class TestDepositWithdrawEndpoint:
             data = response.get_json()
             assert "error" in data
             assert "not found" in data["error"].lower()
+
+
+class TestStatusEndpoint:
+    """Tests for the system status endpoint."""
+
+    @pytest.mark.integration
+    def test_status_endpoint_requires_authentication(self, db_connection):
+        """Test that status endpoint requires authentication."""
+        from lf_automator.webapp.app import create_app
+
+        app = create_app()
+
+        with app.test_client() as client:
+            # Try to access status without authentication
+            response = client.get("/api/status")
+
+            # Should redirect to login
+            assert response.status_code == 302
+            assert "/login" in response.location
+
+    @pytest.mark.integration
+    def test_status_endpoint_returns_system_info(self, db_connection):
+        """Test that status endpoint returns system information."""
+        from lf_automator.webapp.app import create_app
+
+        app = create_app()
+
+        with app.test_client() as client:
+            # Authenticate
+            with client.session_transaction() as sess:
+                sess["authenticated"] = True
+
+            # Get status
+            response = client.get("/api/status")
+
+            # Should return 200
+            assert response.status_code == 200
+
+            # Should return JSON
+            data = response.get_json()
+            assert data is not None
+
+            # Should contain expected fields
+            assert "current_token_total" in data
+            assert "threshold" in data
+            assert "status" in data
+            assert "configuration" in data
+
+            # Configuration should have expected fields
+            config = data["configuration"]
+            assert "schedule_cron" in config
+            assert "scheduling_enabled" in config
+            assert "email_recipients" in config

@@ -48,12 +48,12 @@ class Database:
     def db_credentials_from_env(self):
         """Fixture to get the database credentials from the environment."""
         creds = {
-            "host": os.environ.get("DB_HOST"),
-            "port": os.environ.get("DB_PORT"),
-            "database": os.environ.get("DB_NAME"),
-            "user": os.environ.get("DB_USERNAME"),
-            "password": os.environ.get("DB_PASSWORD"),
-            "connection_url": os.environ.get("DB_CONN"),
+            "host": os.environ.get("POSTGRESQL_ADDON_HOST"),
+            "port": os.environ.get("POSTGRESQL_ADDON_PORT"),
+            "database": os.environ.get("POSTGRESQL_ADDON_DB"),
+            "user": os.environ.get("POSTGRESQL_ADDON_USER"),
+            "password": os.environ.get("POSTGRESQL_ADDON_PASSWORD"),
+            "connection_url": os.environ.get("POSTGRESQL_ADDON_URI"),
         }
         return creds
 

@@ -1,9 +1,15 @@
 """Route handlers for the web dashboard."""
 
-from lf_automator.automator.tokenpools.pools import TokenPool
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from loguru import logger
-from lf_automator.webapp.auth import check_access_key, clear_session, require_auth, set_authenticated
+
+from lf_automator.automator.tokenpools.pools import TokenPool
+from lf_automator.webapp.auth import (
+    check_access_key,
+    clear_session,
+    require_auth,
+    set_authenticated,
+)
 
 bp = Blueprint("main", __name__)
 
@@ -506,3 +512,64 @@ def health_check():
         JSON response with status "ok"
     """
     return jsonify({"status": "ok"})
+
+
+@bp.route("/api/status", methods=["GET"])
+@require_auth
+def system_status():
+    """Get system status information.
+
+    Returns JSON with current token pool status, threshold information,
+    last execution timestamp, and alert state.
+
+    Returns:
+        JSON response with system status information
+    """
+    try:
+        from lf_automator.automator.config.loader import ConfigLoader
+        from lf_automator.automator.inventoryautomator.automator import (
+            TokenInventoryAutomator,
+        )
+
+        # Load configuration
+        config = ConfigLoader.load_config()
+
+        # Initialize automator to access components
+        automator = TokenInventoryAutomator(config=config)
+
+        # Get current token pool status
+        total_tokens = automator.token_pool.get_total_available_tokens()
+        threshold = config["threshold"]
+
+        # Get last execution info
+        timestamp_manager = automator.timestamp_manager
+        last_count = timestamp_manager.get_last_count_timestamp()
+
+        # Get alert state
+        alert_state = automator.alert_manager.get_alert_state()
+
+        # Build status response
+        status_data = {
+            "current_token_total": total_tokens,
+            "threshold": threshold,
+            "status": "below_threshold" if total_tokens < threshold else "ok",
+            "last_count": str(last_count) if last_count else None,
+            "alert_active": alert_state.get("is_active", False),
+            "last_alert": (
+                str(alert_state["last_triggered"])
+                if alert_state.get("last_triggered")
+                else None
+            ),
+            "configuration": {
+                "schedule_cron": config["schedule"]["cron"],
+                "scheduling_enabled": config["schedule"]["enabled"],
+                "email_recipients": config["email"]["recipients"],
+            },
+        }
+
+        logger.info("System status retrieved successfully")
+        return jsonify(status_data)
+
+    except Exception as error:
+        logger.error(f"Failed to get system status: {error}")
+        return jsonify({"error": "Unable to retrieve system status"}), 500
