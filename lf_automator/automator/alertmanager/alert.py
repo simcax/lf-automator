@@ -39,8 +39,10 @@ class AlertManager:
         );
         """
         try:
-            self.db.execute(create_table_query)
-            self.db.connection.commit()
+            with self.db.connection:
+                with self.db.connection.cursor() as cursor:
+                    cursor.execute(create_table_query)
+            logger.debug("Alert state table ensured")
         except Exception as e:
             logger.error(f"Error creating alertState table: {e}")
             if self.db.connection:
@@ -146,10 +148,12 @@ class AlertManager:
         """
 
         try:
-            result = self.db.execute(query)
+            with self.db.connection:
+                with self.db.connection.cursor() as cursor:
+                    cursor.execute(query)
+                    row = cursor.fetchone()
 
-            if result and len(result) > 0:
-                row = result[0]
+            if row:
                 return {
                     "alert_type": row[0],
                     "last_triggered": row[1],
@@ -188,25 +192,26 @@ class AlertManager:
         """
 
         try:
-            result = self.db.execute(check_query)
+            with self.db.connection:
+                with self.db.connection.cursor() as cursor:
+                    cursor.execute(check_query)
+                    result = cursor.fetchone()
 
-            if result and len(result) > 0:
-                # Update existing record
-                update_query = """
-                UPDATE lfautomator.alertState
-                SET isActive = %s, lastTriggered = %s
-                WHERE alertType = 'token_threshold';
-                """
-                self.db.cursor.execute(update_query, (is_active, datetime.now()))
-            else:
-                # Insert new record
-                insert_query = """
-                INSERT INTO lfautomator.alertState (alertType, isActive, lastTriggered)
-                VALUES ('token_threshold', %s, %s);
-                """
-                self.db.cursor.execute(insert_query, (is_active, datetime.now()))
-
-            self.db.connection.commit()
+                    if result:
+                        # Update existing record
+                        update_query = """
+                        UPDATE lfautomator.alertState
+                        SET isActive = %s, lastTriggered = %s
+                        WHERE alertType = 'token_threshold';
+                        """
+                        cursor.execute(update_query, (is_active, datetime.now()))
+                    else:
+                        # Insert new record
+                        insert_query = """
+                        INSERT INTO lfautomator.alertState (alertType, isActive, lastTriggered)
+                        VALUES ('token_threshold', %s, %s);
+                        """
+                        cursor.execute(insert_query, (is_active, datetime.now()))
 
         except Exception as e:
             logger.error(f"Error updating alert state: {e}")

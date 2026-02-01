@@ -128,10 +128,11 @@ function createPoolCard(pool) {
     if (pool.pool_status === 'inactive') {
         actionButtons = `
             <button 
-                class="toggle-status-btn w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+                class="toggle-status-btn w-full inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg shadow-lg"
                 data-pool-id="${pool.pool_uuid}"
+                style="display: flex !important; background-color: #16a34a !important; color: white !important; border: 2px solid #15803d !important; min-height: 44px !important;"
             >
-                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: white;">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                 </svg>
                 Activate Pool
@@ -713,6 +714,63 @@ async function submitTransaction(poolId, transactionType, count) {
 }
 
 /**
+ * Trigger the daily update workflow
+ */
+async function triggerDailyUpdate() {
+    const triggerButton = document.getElementById('triggerDailyUpdateButton');
+    
+    try {
+        // Disable button and show loading state
+        if (triggerButton) {
+            triggerButton.disabled = true;
+            triggerButton.innerHTML = `
+                <svg class="animate-spin w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Running Update...
+            `;
+        }
+        
+        // Show info message
+        showMessage('Daily update workflow started. This may take a few moments...', 'info');
+        
+        // Trigger the daily update
+        const response = await fetch('/api/trigger-daily-update');
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to trigger daily update');
+        }
+        
+        const result = await response.json();
+        
+        // Show success message with details
+        const statusEmoji = result.status === 'success' ? '✅' : '⚠️';
+        const message = `${statusEmoji} Daily update completed: ${result.tokens_distributed} tokens distributed. Current total: ${result.current_total}`;
+        showMessage(message, result.status === 'success' ? 'success' : 'info');
+        
+        // Refresh the pools display to show updated data
+        await refreshPools();
+        
+    } catch (error) {
+        console.error('Error triggering daily update:', error);
+        showMessage(error.message || 'Failed to trigger daily update. Please try again.', 'error');
+    } finally {
+        // Re-enable button and restore original text
+        if (triggerButton) {
+            triggerButton.disabled = false;
+            triggerButton.innerHTML = `
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Trigger Daily Update
+            `;
+        }
+    }
+}
+
+/**
  * Initialize event listeners when the page loads
  */
 function init() {
@@ -720,6 +778,12 @@ function init() {
     const refreshButton = document.getElementById('refreshButton');
     if (refreshButton) {
         refreshButton.addEventListener('click', refreshPools);
+    }
+    
+    // Attach click handler to trigger daily update button
+    const triggerDailyUpdateButton = document.getElementById('triggerDailyUpdateButton');
+    if (triggerDailyUpdateButton) {
+        triggerDailyUpdateButton.addEventListener('click', triggerDailyUpdate);
     }
     
     // Attach click handler to new pool button

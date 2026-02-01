@@ -43,6 +43,8 @@ class TokenRegistry:
         Raises:
             ValueError: If database operation fails
         """
+        from loguru import logger
+
         try:
             with self.db.connection:
                 with self.db.connection.cursor() as cursor:
@@ -61,6 +63,9 @@ class TokenRegistry:
                                WHERE memberUuid = %s""",
                             (token_number, member_uuid),
                         )
+                        logger.debug(
+                            f"  → Updated registry: {member_uuid} = token {token_number}"
+                        )
                         return False
                     else:
                         # Insert new record
@@ -69,6 +74,9 @@ class TokenRegistry:
                                (memberUuid, tokenNumber, registeredAt, updatedAt) 
                                VALUES (%s, %s, NOW(), NOW())""",
                             (member_uuid, token_number),
+                        )
+                        logger.debug(
+                            f"  → Inserted into registry: {member_uuid} = token {token_number}"
                         )
                         return True
         except Exception as error:

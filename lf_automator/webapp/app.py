@@ -1,10 +1,64 @@
 """Flask application factory for the web dashboard."""
 
 import atexit
+import logging
 import os
 
 from flask import Flask
 from loguru import logger
+
+
+class InterceptHandler(logging.Handler):
+    """Intercept standard logging calls and redirect to loguru."""
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Emit a log record by redirecting to loguru.
+
+        Args:
+            record: Standard logging record to redirect
+        """
+        # Get corresponding Loguru level if it exists
+        try:
+            level = logger.level(record.levelname).name
+        except ValueError:
+            level = record.levelno
+
+        # Find caller from where the logged message originated
+        frame, depth = logging.currentframe(), 2
+        while frame.f_code.co_filename == logging.__file__:
+            frame = frame.f_back
+            depth += 1
+
+        logger.opt(depth=depth, exception=record.exc_info).log(
+            level, record.getMessage()
+        )
+
+
+def setup_logging() -> None:
+    """Configure logging to redirect standard logging to loguru."""
+    # Remove default loguru handler
+    logger.remove()
+
+    # Add loguru handler with custom format
+    log_format = (
+        "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
+        "<level>{level: <8}</level> | "
+        "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
+        "<level>{message}</level>"
+    )
+    logger.add(
+        lambda msg: print(msg, end=""),
+        format=log_format,
+        level="INFO",
+    )
+
+    # Intercept standard logging
+    logging.basicConfig(handlers=[InterceptHandler()], level=logging.INFO, force=True)
+
+    # Set log level for all existing loggers
+    for logger_name in logging.root.manager.loggerDict:
+        logging.getLogger(logger_name).handlers = []
+        logging.getLogger(logger_name).propagate = True
 
 
 def create_app() -> Flask:
@@ -13,6 +67,9 @@ def create_app() -> Flask:
     Returns:
         Flask: Configured Flask application instance
     """
+    # Setup logging to intercept standard logging
+    setup_logging()
+
     app = Flask(__name__, static_folder="static", template_folder="templates")
 
     # Load configuration from environment variables

@@ -237,6 +237,8 @@ class TokenPool:
         Returns:
             True if successful, False if insufficient tokens
         """
+        from loguru import logger
+
         if count <= 0:
             raise ValueError("Distribution count must be positive")
 
@@ -245,6 +247,7 @@ class TokenPool:
             return False
 
         remaining_to_distribute = count
+        pools_used = []
 
         try:
             with self.db.connection:
@@ -264,6 +267,10 @@ class TokenPool:
                             remaining_to_distribute, available_in_pool
                         )
 
+                        logger.info(
+                            f"  → Withdrawing {tokens_from_this_pool} tokens from pool {str(pool_uuid)[:8]}..."
+                        )
+
                         cursor.execute(
                             """UPDATE lfautomator.accessTokenPools 
                                SET currentcount = currentcount - %s 
@@ -279,6 +286,17 @@ class TokenPool:
                             (pool_uuid, -tokens_from_this_pool),
                         )
 
+                        logger.info(
+                            f"  ✓ Database updated: pool {str(pool_uuid)[:8]} now has {available_in_pool - tokens_from_this_pool} tokens"
+                        )
+
+                        pools_used.append(
+                            {
+                                "pool_uuid": str(pool_uuid)[:8],
+                                "tokens_withdrawn": tokens_from_this_pool,
+                            }
+                        )
+
                         remaining_to_distribute -= tokens_from_this_pool
 
                         # If pool is now empty, mark it as depleted
@@ -289,6 +307,12 @@ class TokenPool:
                                    WHERE pooluuid = %s""",
                                 (pool_uuid,),
                             )
+                            logger.info(
+                                f"  → Pool {str(pool_uuid)[:8]} depleted, marked as 'depleted'"
+                            )
+
+                if len(pools_used) > 1:
+                    logger.info(f"  ℹ️  Used {len(pools_used)} pools for distribution")
 
                 return True
         except Exception as error:

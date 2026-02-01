@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
 import pytest
+
 from lf_automator.automator.membersync.sync import MemberTokenSync
 from lf_automator.automator.tokenregistry.registry import TokenRegistry
 
@@ -28,27 +29,27 @@ def sample_memberlist():
     return {
         "members": [
             {
-                "MemberUuid": "123e4567-e89b-12d3-a456-426614174000",
+                "MemberId": 12345,
                 "MemberField3": "TOKEN001",
                 "Name": "John Doe",
             },
             {
-                "MemberUuid": "223e4567-e89b-12d3-a456-426614174001",
+                "MemberId": 67890,
                 "MemberField3": "TOKEN002",
                 "Name": "Jane Smith",
             },
             {
-                "MemberUuid": "323e4567-e89b-12d3-a456-426614174002",
+                "MemberId": 11111,
                 "MemberField3": "",  # Empty token field
                 "Name": "Bob Johnson",
             },
             {
-                "MemberUuid": "423e4567-e89b-12d3-a456-426614174003",
+                "MemberId": 22222,
                 "MemberField3": None,  # Null token field
                 "Name": "Alice Williams",
             },
             {
-                "MemberUuid": "523e4567-e89b-12d3-a456-426614174004",
+                "MemberId": 33333,
                 "MemberField3": "   ",  # Whitespace-only token field
                 "Name": "Charlie Brown",
             },
@@ -98,9 +99,18 @@ def test_fetch_members_with_tokens(
 
     # Verify
     assert len(result) == 2  # Only members with valid tokens
-    assert result[0]["member_uuid"] == "123e4567-e89b-12d3-a456-426614174000"
+    # UUIDs are generated deterministically from member IDs
+    import uuid
+
+    expected_uuid_1 = str(
+        uuid.uuid5(uuid.UUID("a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d"), "12345")
+    )
+    expected_uuid_2 = str(
+        uuid.uuid5(uuid.UUID("a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d"), "67890")
+    )
+    assert result[0]["member_uuid"] == expected_uuid_1
     assert result[0]["token_number"] == "TOKEN001"
-    assert result[1]["member_uuid"] == "223e4567-e89b-12d3-a456-426614174001"
+    assert result[1]["member_uuid"] == expected_uuid_2
     assert result[1]["token_number"] == "TOKEN002"
 
 
@@ -119,9 +129,21 @@ def test_fetch_members_with_tokens_filters_empty(
 
     # Should only return members with valid token numbers
     member_uuids = [m["member_uuid"] for m in result]
-    assert "323e4567-e89b-12d3-a456-426614174002" not in member_uuids  # Empty
-    assert "423e4567-e89b-12d3-a456-426614174003" not in member_uuids  # None
-    assert "523e4567-e89b-12d3-a456-426614174004" not in member_uuids  # Whitespace
+    # Generate UUIDs for members that should be filtered out
+    import uuid
+
+    filtered_uuid_1 = str(
+        uuid.uuid5(uuid.UUID("a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d"), "11111")
+    )
+    filtered_uuid_2 = str(
+        uuid.uuid5(uuid.UUID("a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d"), "22222")
+    )
+    filtered_uuid_3 = str(
+        uuid.uuid5(uuid.UUID("a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d"), "33333")
+    )
+    assert filtered_uuid_1 not in member_uuids  # Empty
+    assert filtered_uuid_2 not in member_uuids  # None
+    assert filtered_uuid_3 not in member_uuids  # Whitespace
 
 
 @patch("lf_automator.automator.membersync.sync.Memberlist")

@@ -573,3 +573,70 @@ def system_status():
     except Exception as error:
         logger.error(f"Failed to get system status: {error}")
         return jsonify({"error": "Unable to retrieve system status"}), 500
+
+
+@bp.route("/api/trigger-daily-update", methods=["GET"])
+@require_auth
+def trigger_daily_update():
+    """Manually trigger the daily token inventory update workflow.
+
+    This endpoint executes the complete daily counting process:
+    1. Fetch and sync members from API
+    2. Count new token distributions
+    3. Update token pools
+    4. Check threshold and send alerts
+    5. Finalize count with timestamp update
+
+    Returns:
+        JSON response with execution summary including:
+        - execution_time: When the update was triggered
+        - tokens_distributed: Number of tokens distributed
+        - previous_total: Token count before update
+        - current_total: Token count after update
+        - threshold: Configured threshold value
+        - alert_sent: Whether an alert was triggered
+        - status: 'success', 'partial', or 'failed'
+        - errors: List of any errors encountered
+    """
+    try:
+        from lf_automator.automator.config.loader import ConfigLoader
+        from lf_automator.automator.inventoryautomator.automator import (
+            TokenInventoryAutomator,
+        )
+
+        logger.info("Manual daily update triggered via API")
+
+        # Load configuration
+        config = ConfigLoader.load_config()
+
+        # Initialize automator
+        automator = TokenInventoryAutomator(config=config)
+
+        # Execute the daily count workflow
+        summary = automator.run_daily_count()
+
+        # Convert datetime to string for JSON serialization
+        summary["execution_time"] = summary["execution_time"].isoformat()
+
+        logger.info(
+            f"Manual daily update completed: status={summary['status']}, "
+            f"tokens_distributed={summary['tokens_distributed']}"
+        )
+
+        # Return appropriate status code based on result
+        status_code = 200 if summary["status"] == "success" else 207
+
+        return jsonify(summary), status_code
+
+    except Exception as error:
+        logger.error(f"Failed to execute daily update: {error}")
+        return (
+            jsonify(
+                {
+                    "error": "Failed to execute daily update",
+                    "details": str(error),
+                    "status": "failed",
+                }
+            ),
+            500,
+        )

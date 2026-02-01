@@ -27,6 +27,12 @@
                 </svg>
                 Refresh
             </button>
+            <button id="triggerDailyUpdateButton" type="button" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Trigger Daily Update
+            </button>
             <button id="newPoolButton" type="button" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -185,14 +191,15 @@
         </div>
         
         <!-- Action Buttons -->
-        <div class="px-6 pb-6">
+        <div class="px-6 pb-6" style="background-color: white;">
             {% if pool.pool_status == 'inactive' %}
             <!-- Activation Button for Inactive Pools -->
             <button 
-                class="toggle-status-btn w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+                class="toggle-status-btn w-full inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg shadow-lg"
                 data-pool-id="{{ pool.pool_uuid }}"
+                style="display: flex !important; background-color: #16a34a !important; color: white !important; border: 2px solid #15803d !important; min-height: 44px !important;"
             >
-                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: white;">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                 </svg>
                 Activate Pool

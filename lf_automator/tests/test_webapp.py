@@ -1036,3 +1036,199 @@ class TestStatusEndpoint:
             assert "schedule_cron" in config
             assert "scheduling_enabled" in config
             assert "email_recipients" in config
+
+
+class TestTriggerDailyUpdateEndpoint:
+    """Tests for the manual daily update trigger endpoint."""
+
+    @pytest.mark.integration
+    def test_trigger_daily_update_requires_authentication(self, db_connection):
+        """Test that trigger endpoint requires authentication."""
+        app = create_app()
+
+        with app.test_client() as client:
+            # Try to trigger without authentication
+            response = client.get("/api/trigger-daily-update")
+
+            # Should redirect to login
+            assert response.status_code == 302
+            assert "/login" in response.location
+
+    @pytest.mark.integration
+    def test_trigger_daily_update_executes_workflow(self, db_connection):
+        """Test that trigger endpoint executes the daily workflow."""
+        from unittest.mock import MagicMock, patch
+
+        app = create_app()
+
+        with app.test_client() as client:
+            # Authenticate
+            with client.session_transaction() as sess:
+                sess["authenticated"] = True
+
+            # Mock the automator to avoid external API calls
+            with patch(
+                "lf_automator.automator.inventoryautomator.automator.TokenInventoryAutomator"
+            ) as mock_automator_class:
+                mock_automator = MagicMock()
+                mock_automator_class.return_value = mock_automator
+
+                # Mock the run_daily_count method to return a summary
+                from datetime import datetime
+
+                mock_summary = {
+                    "execution_time": datetime.now(),
+                    "tokens_distributed": 5,
+                    "previous_total": 45,
+                    "current_total": 40,
+                    "threshold": 10,
+                    "alert_sent": False,
+                    "status": "success",
+                    "errors": [],
+                }
+                mock_automator.run_daily_count.return_value = mock_summary
+
+                # Trigger the update
+                response = client.get("/api/trigger-daily-update")
+
+                # Should return 200
+                assert response.status_code == 200
+
+                # Verify automator was called
+                mock_automator.run_daily_count.assert_called_once()
+
+                # Verify response
+                data = response.get_json()
+                assert data is not None
+                assert data["status"] == "success"
+                assert data["tokens_distributed"] == 5
+                assert data["previous_total"] == 45
+                assert data["current_total"] == 40
+                assert data["threshold"] == 10
+                assert data["alert_sent"] is False
+                assert "execution_time" in data
+                assert isinstance(data["errors"], list)
+
+    @pytest.mark.integration
+    def test_trigger_daily_update_returns_partial_status_on_errors(self, db_connection):
+        """Test that trigger endpoint returns 207 for partial success."""
+        from unittest.mock import MagicMock, patch
+
+        app = create_app()
+
+        with app.test_client() as client:
+            # Authenticate
+            with client.session_transaction() as sess:
+                sess["authenticated"] = True
+
+            # Mock the automator
+            with patch(
+                "lf_automator.automator.inventoryautomator.automator.TokenInventoryAutomator"
+            ) as mock_automator_class:
+                mock_automator = MagicMock()
+                mock_automator_class.return_value = mock_automator
+
+                # Mock run_daily_count to return partial status
+                from datetime import datetime
+
+                mock_summary = {
+                    "execution_time": datetime.now(),
+                    "tokens_distributed": 3,
+                    "previous_total": 20,
+                    "current_total": 17,
+                    "threshold": 10,
+                    "alert_sent": False,
+                    "status": "partial",
+                    "errors": ["Step 1 failed (fetch and sync): API timeout"],
+                }
+                mock_automator.run_daily_count.return_value = mock_summary
+
+                # Trigger the update
+                response = client.get("/api/trigger-daily-update")
+
+                # Should return 207 (Multi-Status)
+                assert response.status_code == 207
+
+                # Verify response
+                data = response.get_json()
+                assert data["status"] == "partial"
+                assert len(data["errors"]) > 0
+
+    @pytest.mark.integration
+    def test_trigger_daily_update_handles_exceptions(self, db_connection):
+        """Test that trigger endpoint handles exceptions gracefully."""
+        from unittest.mock import patch
+
+        app = create_app()
+
+        with app.test_client() as client:
+            # Authenticate
+            with client.session_transaction() as sess:
+                sess["authenticated"] = True
+
+            # Mock the automator to raise an exception
+            with patch(
+                "lf_automator.automator.inventoryautomator.automator.TokenInventoryAutomator"
+            ) as mock_automator_class:
+                mock_automator_class.side_effect = Exception(
+                    "Database connection failed"
+                )
+
+                # Trigger the update
+                response = client.get("/api/trigger-daily-update")
+
+                # Should return 500
+                assert response.status_code == 500
+
+                # Verify error response
+                data = response.get_json()
+                assert "error" in data
+                assert data["status"] == "failed"
+                assert "details" in data
+
+    @pytest.mark.integration
+    def test_trigger_daily_update_serializes_datetime(self, db_connection):
+        """Test that trigger endpoint properly serializes datetime objects."""
+        from unittest.mock import MagicMock, patch
+
+        app = create_app()
+
+        with app.test_client() as client:
+            # Authenticate
+            with client.session_transaction() as sess:
+                sess["authenticated"] = True
+
+            # Mock the automator
+            with patch(
+                "lf_automator.automator.inventoryautomator.automator.TokenInventoryAutomator"
+            ) as mock_automator_class:
+                mock_automator = MagicMock()
+                mock_automator_class.return_value = mock_automator
+
+                # Mock run_daily_count with datetime
+                from datetime import datetime
+
+                execution_time = datetime(2026, 1, 25, 14, 30, 0)
+                mock_summary = {
+                    "execution_time": execution_time,
+                    "tokens_distributed": 2,
+                    "previous_total": 30,
+                    "current_total": 28,
+                    "threshold": 10,
+                    "alert_sent": False,
+                    "status": "success",
+                    "errors": [],
+                }
+                mock_automator.run_daily_count.return_value = mock_summary
+
+                # Trigger the update
+                response = client.get("/api/trigger-daily-update")
+
+                # Should return 200
+                assert response.status_code == 200
+
+                # Verify datetime is serialized as ISO format string
+                data = response.get_json()
+                assert "execution_time" in data
+                assert isinstance(data["execution_time"], str)
+                assert "2026-01-25" in data["execution_time"]

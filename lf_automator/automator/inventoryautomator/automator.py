@@ -204,9 +204,12 @@ class TokenInventoryAutomator:
             RuntimeError: If API fetch fails
             ValueError: If registry operations fail
         """
-        logger.info("Fetching members from Foreninglet API")
+        logger.info("=" * 60)
+        logger.info("STEP 1: Fetching members from Foreninglet API")
+        logger.info("=" * 60)
         new_registrations = self.member_sync.sync_to_registry()
-        logger.info(f"Synced {new_registrations} new member token assignments")
+        logger.info(f"✓ Synced {new_registrations} new member token assignments")
+        logger.info("")
         return new_registrations
 
     def _count_new_distributions(self) -> int:
@@ -218,7 +221,9 @@ class TokenInventoryAutomator:
         Raises:
             ValueError: If timestamp or registry operations fail
         """
-        logger.info("Counting new token distributions")
+        logger.info("=" * 60)
+        logger.info("STEP 2: Counting new token distributions")
+        logger.info("=" * 60)
 
         # Get last count timestamp
         last_count_time = self.timestamp_manager.get_last_count_timestamp()
@@ -229,8 +234,19 @@ class TokenInventoryAutomator:
 
         distributed_count = len(new_assignments)
         logger.info(
-            f"Found {distributed_count} new token assignments since {last_count_time}"
+            f"✓ Found {distributed_count} new token assignments since {last_count_time}"
         )
+
+        if distributed_count > 0:
+            logger.info(
+                f"New assignments: {[a['member_uuid'] for a in new_assignments[:5]]}"
+                + (
+                    f" ... and {distributed_count - 5} more"
+                    if distributed_count > 5
+                    else ""
+                )
+            )
+        logger.info("")
 
         return distributed_count
 
@@ -246,7 +262,10 @@ class TokenInventoryAutomator:
         Raises:
             ValueError: If pool operations fail
         """
-        logger.info(f"Updating token pools: distributing {distributed_count} tokens")
+        logger.info("=" * 60)
+        logger.info("STEP 3: Updating token pools")
+        logger.info("=" * 60)
+        logger.info(f"Distributing {distributed_count} tokens from pools")
 
         # Check total available tokens
         total_available = self.token_pool.get_total_available_tokens()
@@ -254,7 +273,7 @@ class TokenInventoryAutomator:
 
         if total_available < distributed_count:
             logger.error(
-                f"Insufficient tokens: need {distributed_count}, have {total_available}"
+                f"❌ Insufficient tokens: need {distributed_count}, have {total_available}"
             )
             return False
 
@@ -263,10 +282,14 @@ class TokenInventoryAutomator:
 
         if success:
             new_total = self.token_pool.get_total_available_tokens()
-            logger.info(f"Token pools updated successfully: new total = {new_total}")
+            logger.info("✓ Token pools updated successfully")
+            logger.info(f"  Before: {total_available} tokens")
+            logger.info(f"  After:  {new_total} tokens")
+            logger.info(f"  Change: -{distributed_count} tokens")
         else:
-            logger.error("Failed to distribute tokens from pools")
+            logger.error("❌ Failed to distribute tokens from pools")
 
+        logger.info("")
         return success
 
     def _check_and_alert(self) -> bool:
