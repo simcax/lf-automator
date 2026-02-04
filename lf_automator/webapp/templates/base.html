@@ -26,8 +26,12 @@
                     </div>
                     <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
                         <a href="{{ url_for('main.dashboard') }}" 
-                           class="border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                           class="{% if request.endpoint == 'main.dashboard' %}border-blue-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                             Dashboard
+                        </a>
+                        <a href="{{ url_for('main.config_info') }}" 
+                           class="{% if request.endpoint == 'main.config_info' %}border-blue-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            Configuration
                         </a>
                     </div>
                 </div>
@@ -76,7 +80,11 @@
                                 Dashboard
                             </a>
                         </li>
-                        
+                        <li>
+                            <a href="{{ url_for('main.config_info') }}" class="text-sm text-gray-600 hover:text-blue-600 transition-colors">
+                                Configuration
+                            </a>
+                        </li>
                     </ul>
                 </div>
                 

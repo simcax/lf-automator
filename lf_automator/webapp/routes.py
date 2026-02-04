@@ -501,6 +501,65 @@ def get_pool_history(pool_id):
         return jsonify({"error": "Unable to fetch pool history"}), 500
 
 
+@bp.route("/config", methods=["GET"])
+@require_auth
+def config_info():
+    """Display system configuration information.
+
+    Shows environment configuration with secrets masked.
+
+    Returns:
+        Rendered config template with configuration data
+    """
+    import os
+
+    try:
+        # Gather configuration data
+        config_data = {
+            "database": {
+                "host": os.getenv("POSTGRESQL_ADDON_HOST", "Not set"),
+                "port": os.getenv("POSTGRESQL_ADDON_PORT", "Not set"),
+                "database": os.getenv("POSTGRESQL_ADDON_DB", "Not set"),
+                "user": os.getenv("POSTGRESQL_ADDON_USER", "Not set"),
+                "password_set": bool(os.getenv("POSTGRESQL_ADDON_PASSWORD")),
+            },
+            "foreninglet_api": {
+                "base_url": os.getenv("API_BASE_URL", "Not set"),
+                "version": os.getenv("API_VERSION", "Not set"),
+                "username": os.getenv("API_USERNAME", "Not set"),
+                "password_set": bool(os.getenv("API_PASSWORD")),
+                "members_endpoint": os.getenv("API_MEMBERS_API", "Not set"),
+                "activities_endpoint": os.getenv("API_ACTIVITIES_API", "Not set"),
+                "resigned_members_endpoint": os.getenv(
+                    "API_RESIGNED_MEMBERS_API", "Not set"
+                ),
+            },
+            "email": {
+                "sendgrid_api_key_set": bool(os.getenv("SENDGRID_API_KEY")),
+                "recipients": os.getenv("ALERT_EMAIL_RECIPIENTS", "Not set"),
+            },
+            "scheduling": {
+                "daily_count_schedule": os.getenv("DAILY_COUNT_SCHEDULE", "Not set"),
+            },
+            "membership": {
+                "keywords": os.getenv("MEMBERSHIP_KEYWORDS", "Not set"),
+            },
+            "security": {
+                "access_key_set": bool(os.getenv("ACCESS_KEY")),
+            },
+        }
+
+        return render_template("config.html", config=config_data)
+
+    except Exception as error:
+        logger.error(f"Error loading configuration: {error}")
+        return render_template(
+            "config.html",
+            config=None,
+            error="Unable to load configuration. Please try again later.",
+        )
+
+
 @bp.route("/health", methods=["GET"])
 def health_check():
     """Health check endpoint for liveness monitoring.
