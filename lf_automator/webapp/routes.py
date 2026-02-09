@@ -299,11 +299,15 @@ def pool_transaction(pool_id):
 
                 current_count = row[3]
 
+                start_count = row[2]
+
                 # Calculate new count based on transaction type
                 if transaction_type == "deposit":
                     new_count = current_count + count
+                    new_start_count = start_count + count
                 else:  # withdraw
                     new_count = current_count - count
+                    new_start_count = start_count
                     # Prevent negative counts
                     if new_count < 0:
                         return (
@@ -315,12 +319,12 @@ def pool_transaction(pool_id):
                             400,
                         )
 
-                # Update the pool's current count
+                # Update the pool's current count and start count (for deposits)
                 cursor.execute(
                     """UPDATE lfautomator.accessTokenPools 
-                       SET currentcount = %s 
+                       SET currentcount = %s, startcount = %s 
                        WHERE pooluuid = %s""",
-                    (new_count, pool_id),
+                    (new_count, new_start_count, pool_id),
                 )
 
                 # Record the transaction in history

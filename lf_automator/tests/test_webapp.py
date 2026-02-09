@@ -813,6 +813,8 @@ class TestDepositWithdrawEndpoint:
             data = response.get_json()
             assert data["success"] is True
             assert data["pool"]["current_count"] == 15
+            # Verify that start_count is also updated for deposits
+            assert data["pool"]["start_count"] == 15
 
     @pytest.mark.integration
     def test_withdraw_decreases_pool_count(self, db_connection):

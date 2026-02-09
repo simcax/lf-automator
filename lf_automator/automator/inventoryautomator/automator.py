@@ -86,8 +86,10 @@ class TokenInventoryAutomator:
                 new_registrations = self._fetch_and_sync_members()
                 logger.info(f"Step 1 complete: {new_registrations} new registrations")
             except Exception as error:
-                error_msg = f"Step 1 failed (fetch and sync): {error}"
-                logger.error(error_msg)
+                error_msg = (
+                    f"Step 1 failed (fetch and sync): {type(error).__name__}: {error}"
+                )
+                logger.error(error_msg, exc_info=True)
                 errors.append(error_msg)
                 status = "partial"
 
