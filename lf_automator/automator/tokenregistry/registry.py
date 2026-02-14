@@ -45,41 +45,46 @@ class TokenRegistry:
         """
         from loguru import logger
 
-        try:
-            with self.db.connection:
-                with self.db.connection.cursor() as cursor:
-                    # Check if member already exists
-                    cursor.execute(
-                        "SELECT registryUuid FROM lfautomator.memberTokenRegistry WHERE memberUuid = %s",
-                        (member_uuid,),
-                    )
-                    existing = cursor.fetchone()
+        if self.db.connection is None or self.db.cursor is None:
+            raise ValueError("Database connection not established")
 
-                    if existing:
-                        # Update existing record
-                        cursor.execute(
-                            """UPDATE lfautomator.memberTokenRegistry 
-                               SET tokenNumber = %s, updatedAt = NOW() 
-                               WHERE memberUuid = %s""",
-                            (token_number, member_uuid),
-                        )
-                        logger.debug(
-                            f"  → Updated registry: {member_uuid} = token {token_number}"
-                        )
-                        return False
-                    else:
-                        # Insert new record
-                        cursor.execute(
-                            """INSERT INTO lfautomator.memberTokenRegistry 
-                               (memberUuid, tokenNumber, registeredAt, updatedAt) 
-                               VALUES (%s, %s, NOW(), NOW())""",
-                            (member_uuid, token_number),
-                        )
-                        logger.debug(
-                            f"  → Inserted into registry: {member_uuid} = token {token_number}"
-                        )
-                        return True
+        try:
+            # Check if member already exists
+            self.db.cursor.execute(
+                "SELECT registryUuid FROM lfautomator.memberTokenRegistry WHERE memberUuid = %s",
+                (member_uuid,),
+            )
+            existing = self.db.cursor.fetchone()
+
+            if existing:
+                # Update existing record
+                self.db.cursor.execute(
+                    """UPDATE lfautomator.memberTokenRegistry 
+                       SET tokenNumber = %s, updatedAt = NOW() 
+                       WHERE memberUuid = %s""",
+                    (token_number, member_uuid),
+                )
+                self.db.connection.commit()
+                logger.debug(
+                    f"  → Updated registry: {member_uuid} = token {token_number}"
+                )
+                return False
+            else:
+                # Insert new record
+                self.db.cursor.execute(
+                    """INSERT INTO lfautomator.memberTokenRegistry 
+                       (memberUuid, tokenNumber, registeredAt, updatedAt) 
+                       VALUES (%s, %s, NOW(), NOW())""",
+                    (member_uuid, token_number),
+                )
+                self.db.connection.commit()
+                logger.debug(
+                    f"  → Inserted into registry: {member_uuid} = token {token_number}"
+                )
+                return True
         except Exception as error:
+            if self.db.connection is not None:
+                self.db.connection.rollback()
             raise ValueError(f"Error registering member token: {error}")
 
     def get_members_registered_since(self, timestamp: datetime) -> List[Dict]:
@@ -95,26 +100,24 @@ class TokenRegistry:
             ValueError: If database operation fails
         """
         try:
-            with self.db.connection:
-                with self.db.connection.cursor() as cursor:
-                    cursor.execute(
-                        """SELECT memberUuid, tokenNumber, registeredAt, updatedAt 
-                           FROM lfautomator.memberTokenRegistry 
-                           WHERE registeredAt > %s 
-                           ORDER BY registeredAt ASC""",
-                        (timestamp,),
-                    )
-                    rows = cursor.fetchall()
+            self.db.cursor.execute(
+                """SELECT memberUuid, tokenNumber, registeredAt, updatedAt 
+                   FROM lfautomator.memberTokenRegistry 
+                   WHERE registeredAt > %s 
+                   ORDER BY registeredAt ASC""",
+                (timestamp,),
+            )
+            rows = self.db.cursor.fetchall()
 
-                    return [
-                        {
-                            "member_uuid": str(row[0]),
-                            "token_number": row[1],
-                            "registered_at": row[2],
-                            "updated_at": row[3],
-                        }
-                        for row in rows
-                    ]
+            return [
+                {
+                    "member_uuid": str(row[0]),
+                    "token_number": row[1],
+                    "registered_at": row[2],
+                    "updated_at": row[3],
+                }
+                for row in rows
+            ]
         except Exception as error:
             raise ValueError(
                 f"Error getting members registered since timestamp: {error}"
@@ -130,24 +133,22 @@ class TokenRegistry:
             ValueError: If database operation fails
         """
         try:
-            with self.db.connection:
-                with self.db.connection.cursor() as cursor:
-                    cursor.execute(
-                        """SELECT memberUuid, tokenNumber, registeredAt, updatedAt 
-                           FROM lfautomator.memberTokenRegistry 
-                           ORDER BY registeredAt ASC"""
-                    )
-                    rows = cursor.fetchall()
+            self.db.cursor.execute(
+                """SELECT memberUuid, tokenNumber, registeredAt, updatedAt 
+                   FROM lfautomator.memberTokenRegistry 
+                   ORDER BY registeredAt ASC"""
+            )
+            rows = self.db.cursor.fetchall()
 
-                    return [
-                        {
-                            "member_uuid": str(row[0]),
-                            "token_number": row[1],
-                            "registered_at": row[2],
-                            "updated_at": row[3],
-                        }
-                        for row in rows
-                    ]
+            return [
+                {
+                    "member_uuid": str(row[0]),
+                    "token_number": row[1],
+                    "registered_at": row[2],
+                    "updated_at": row[3],
+                }
+                for row in rows
+            ]
         except Exception as error:
             raise ValueError(f"Error getting all registered members: {error}")
 
@@ -164,13 +165,11 @@ class TokenRegistry:
             ValueError: If database operation fails
         """
         try:
-            with self.db.connection:
-                with self.db.connection.cursor() as cursor:
-                    cursor.execute(
-                        "SELECT COUNT(*) FROM lfautomator.memberTokenRegistry WHERE memberUuid = %s",
-                        (member_uuid,),
-                    )
-                    count = cursor.fetchone()[0]
-                    return count > 0
+            self.db.cursor.execute(
+                "SELECT COUNT(*) FROM lfautomator.memberTokenRegistry WHERE memberUuid = %s",
+                (member_uuid,),
+            )
+            count = self.db.cursor.fetchone()[0]
+            return count > 0
         except Exception as error:
             raise ValueError(f"Error checking if member exists: {error}")
