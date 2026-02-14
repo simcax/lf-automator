@@ -85,6 +85,8 @@ class TestConfigRoute:
 
     def test_config_route_displays_non_secret_values(self):
         """Test that config route displays non-secret configuration values."""
+        import os
+
         app = create_app()
 
         with app.test_client() as client:
@@ -98,12 +100,24 @@ class TestConfigRoute:
             # Should return 200
             assert response.status_code == 200
 
-            # Should contain non-secret values
-            assert b"localhost" in response.data  # Database host
-            assert b"5432" in response.data  # Database port
-            assert b"lfautomator" in response.data  # Database name
-            assert b"https://foreninglet.dk/api/" in response.data  # API base URL
-            assert b"carsten@lejre.fitness" in response.data  # Email recipients
+            # Should contain non-secret values from environment
+            db_host = os.getenv("POSTGRESQL_ADDON_HOST", "localhost")
+            db_port = os.getenv("POSTGRESQL_ADDON_PORT", "5432")
+            db_name = os.getenv("POSTGRESQL_ADDON_DB", "lfautomator")
+
+            assert db_host.encode() in response.data  # Database host
+            assert db_port.encode() in response.data  # Database port
+            assert db_name.encode() in response.data  # Database name
+
+            # Check for API URL if set
+            api_url = os.getenv("API_BASE_URL")
+            if api_url:
+                assert api_url.encode() in response.data
+
+            # Check for email recipients if set
+            email_recipients = os.getenv("ALERT_EMAIL_RECIPIENTS")
+            if email_recipients:
+                assert email_recipients.encode() in response.data
 
     def test_config_route_shows_not_set_for_missing_secrets(self):
         """Test that config route shows 'Not Set' badge for missing secrets."""

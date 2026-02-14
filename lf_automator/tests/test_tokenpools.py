@@ -410,27 +410,27 @@ def test_distribute_tokens_creates_history_records():
     success = tokenpool.distribute_tokens(5)
     assert success is True
 
-    # Check history was created - check all records first
-    with tokenpool.db.connection:
-        with tokenpool.db.connection.cursor() as cursor:
-            # Get all history records
-            cursor.execute(
-                """SELECT poolUuid, accessTokenCount FROM lfautomator.accessTokenPoolsHistory 
-                   ORDER BY changeDate DESC"""
-            )
-            all_records = cursor.fetchall()
+    # Check history was created using the shared cursor
+    tokenpool.db.cursor.execute(
+        """SELECT poolUuid, accessTokenCount FROM lfautomator.accessTokenPoolsHistory 
+           WHERE poolUuid = %s ORDER BY changeDate DESC LIMIT 1""",
+        (pool_uuid,),
+    )
+    result = tokenpool.db.cursor.fetchone()
 
-            # Find record for our pool
-            cursor.execute(
-                """SELECT accessTokenCount FROM lfautomator.accessTokenPoolsHistory 
-                   WHERE poolUuid = %s ORDER BY changeDate DESC LIMIT 1""",
-                (pool_uuid,),
-            )
-            result = cursor.fetchone()
-            assert (
-                result is not None
-            ), f"No history found for pool {pool_uuid}. All records: {all_records}"
-            assert result[0] == -5  # Negative for distribution
+    # If not found, get all records for debugging
+    if result is None:
+        tokenpool.db.cursor.execute(
+            """SELECT poolUuid, accessTokenCount FROM lfautomator.accessTokenPoolsHistory 
+               ORDER BY changeDate DESC"""
+        )
+        all_records = tokenpool.db.cursor.fetchall()
+        assert (
+            False
+        ), f"No history found for pool {pool_uuid}. All records: {all_records}"
+
+    assert result[0] == pool_uuid
+    assert result[1] == -5  # Negative for distribution
 
 
 def test_history_records_multiple_transactions():

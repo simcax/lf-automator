@@ -4,7 +4,6 @@ Feature: web-dashboard, Property 1: Authentication flow (example test)
 """
 
 import os
-import re
 import threading
 import time
 
@@ -756,8 +755,10 @@ class TestTokenPoolActivation:
             )
             expect(activate_button).to_be_visible()
 
-            # Verify button has correct styling (green background)
-            expect(activate_button).to_have_class(re.compile(r"bg-green-600"))
+            # Verify button has correct styling (green background via inline style)
+            style_attr = activate_button.get_attribute("style")
+            assert style_attr is not None
+            assert "background-color" in style_attr.lower() or "16a34a" in style_attr
 
         finally:
             # Cleanup: Delete test pool

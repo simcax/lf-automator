@@ -1,22 +1,9 @@
 """Playwright UI tests for token pool deposit functionality."""
 
-import os
 import re
 
 import pytest
 from playwright.sync_api import Page, expect
-
-
-@pytest.fixture(scope="module")
-def base_url():
-    """Get the base URL for the application."""
-    return os.getenv("TEST_BASE_URL", "http://localhost:5000")
-
-
-@pytest.fixture(scope="module")
-def access_key():
-    """Get the access key for authentication."""
-    return os.getenv("ACCESS_KEY", "test-key")
 
 
 def login(page: Page, base_url: str, access_key: str):
@@ -28,7 +15,7 @@ def login(page: Page, base_url: str, access_key: str):
 
 
 @pytest.mark.integration
-def test_deposit_updates_total_count(page: Page, base_url: str, access_key: str):
+def test_deposit_updates_total_count(page: Page, flask_server: dict):
     """Test that depositing tokens updates the total count displayed in the UI.
 
     This test verifies that when tokens are deposited to a pool:
@@ -36,6 +23,9 @@ def test_deposit_updates_total_count(page: Page, base_url: str, access_key: str)
     2. The total count (denominator) also increases to reflect the new capacity
     3. The UI shows "X of Y" where Y is the updated total, not the original start_count
     """
+    base_url = flask_server["base_url"]
+    access_key = flask_server["access_key"]
+
     # Login
     login(page, base_url, access_key)
 
