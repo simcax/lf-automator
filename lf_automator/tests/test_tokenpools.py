@@ -334,237 +334,47 @@ def test_remove_tokens_creates_history_record():
             assert result[0] == -3  # Negative for withdrawal
 
 
-def test_history_records_multiple_transactions():
-    """Test that multiple transactions create multiple history records."""
-    tokenpool = TokenPool()
-    pool_uuid = tokenpool.create_tokenpool(20)
-
-    # Perform multiple transactions
-    tokenpool.add_tokens_to_tokenpool(5)
-    tokenpool.remove_tokens_from_tokenpool(3)
-    tokenpool.add_tokens_to_tokenpool(10)
-
-    # Check all history records were created
-    with tokenpool.db.connection:
-        with tokenpool.db.connection.cursor() as cursor:
-            cursor.execute(
-                """SELECT accessTokenCount FROM lfautomator.accessTokenPoolsHistory 
-                   WHERE poolUuid = %s ORDER BY changeDate ASC""",
-                (pool_uuid,),
-            )
-            results = cursor.fetchall()
-            assert len(results) == 3
-            assert results[0][0] == 5  # First deposit
-            assert results[1][0] == -3  # Withdrawal
-            assert results[2][0] == 10  # Second deposit
-
-
-def test_add_tokens_creates_history_record():
-    """Test that adding tokens creates a history record."""
-    tokenpool = TokenPool()
-    pool_uuid = tokenpool.create_tokenpool(10)
-
-    # Add tokens
-    tokenpool.add_tokens_to_tokenpool(5)
-
-    # Check history was created
-    with tokenpool.db.connection:
-        with tokenpool.db.connection.cursor() as cursor:
-            cursor.execute(
-                """SELECT accessTokenCount FROM lfautomator.accessTokenPoolsHistory 
-                   WHERE poolUuid = %s ORDER BY changeDate DESC LIMIT 1""",
-                (pool_uuid,),
-            )
-            result = cursor.fetchone()
-            assert result is not None
-            assert result[0] == 5  # Positive for deposit
-
-
-def test_remove_tokens_creates_history_record():
-    """Test that removing tokens creates a history record."""
-    tokenpool = TokenPool()
-    pool_uuid = tokenpool.create_tokenpool(10)
-
-    # Remove tokens
-    tokenpool.remove_tokens_from_tokenpool(3)
-
-    # Check history was created
-    with tokenpool.db.connection:
-        with tokenpool.db.connection.cursor() as cursor:
-            cursor.execute(
-                """SELECT accessTokenCount FROM lfautomator.accessTokenPoolsHistory 
-                   WHERE poolUuid = %s ORDER BY changeDate DESC LIMIT 1""",
-                (pool_uuid,),
-            )
-            result = cursor.fetchone()
-            assert result is not None
-            assert result[0] == -3  # Negative for withdrawal
-
-
 def test_distribute_tokens_creates_history_records():
     """Test that distributing tokens creates history records."""
     tokenpool = TokenPool()
+
+    # First, deplete all existing active pools to ensure our new pool is used
+    all_pools = tokenpool.get_all_active_pools()
+    for pool in all_pools:
+        if pool["current_count"] > 0:
+            tp = TokenPool(pool_uuid=pool["pool_uuid"])
+            tp.remove_tokens_from_tokenpool(pool["current_count"])
+
+    # Now create our test pool
     pool_uuid = tokenpool.create_tokenpool(10)
 
     # Distribute tokens
     success = tokenpool.distribute_tokens(5)
     assert success is True
 
-    # Check history was created using the shared cursor
-    tokenpool.db.cursor.execute(
-        """SELECT poolUuid, accessTokenCount FROM lfautomator.accessTokenPoolsHistory 
-           WHERE poolUuid = %s ORDER BY changeDate DESC LIMIT 1""",
-        (pool_uuid,),
-    )
-    result = tokenpool.db.cursor.fetchone()
-
-    # If not found, get all records for debugging
-    if result is None:
-        tokenpool.db.cursor.execute(
-            """SELECT poolUuid, accessTokenCount FROM lfautomator.accessTokenPoolsHistory 
-               ORDER BY changeDate DESC"""
-        )
-        all_records = tokenpool.db.cursor.fetchall()
-        assert (
-            False
-        ), f"No history found for pool {pool_uuid}. All records: {all_records}"
-
-    assert result[0] == pool_uuid
-    assert result[1] == -5  # Negative for distribution
-
-
-def test_history_records_multiple_transactions():
-    """Test that multiple transactions create multiple history records."""
-    tokenpool = TokenPool()
-    pool_uuid = tokenpool.create_tokenpool(20)
-
-    # Perform multiple transactions
-    tokenpool.add_tokens_to_tokenpool(5)
-    tokenpool.remove_tokens_from_tokenpool(3)
-    tokenpool.add_tokens_to_tokenpool(10)
-
-    # Check all history records were created
-    with tokenpool.db.connection:
-        with tokenpool.db.connection.cursor() as cursor:
-            cursor.execute(
-                """SELECT accessTokenCount FROM lfautomator.accessTokenPoolsHistory 
-                   WHERE poolUuid = %s ORDER BY changeDate ASC""",
-                (pool_uuid,),
-            )
-            results = cursor.fetchall()
-            assert len(results) == 3
-            assert results[0][0] == 5  # First deposit
-            assert results[1][0] == -3  # Withdrawal
-            assert results[2][0] == 10  # Second deposit
-
-
-def test_add_tokens_creates_history_record():
-    """Test that adding tokens creates a history record."""
-    tokenpool = TokenPool()
-    pool_uuid = tokenpool.create_tokenpool(10)
-
-    # Add tokens
-    tokenpool.add_tokens_to_tokenpool(5)
-
     # Check history was created
     with tokenpool.db.connection:
         with tokenpool.db.connection.cursor() as cursor:
             cursor.execute(
-                """SELECT accessTokenCount FROM lfautomator.accessTokenPoolsHistory 
+                """SELECT poolUuid, accessTokenCount FROM lfautomator.accessTokenPoolsHistory 
                    WHERE poolUuid = %s ORDER BY changeDate DESC LIMIT 1""",
                 (pool_uuid,),
             )
             result = cursor.fetchone()
-            assert result is not None
-            assert result[0] == 5  # Positive for deposit
 
+            # If not found, get all records for debugging
+            if result is None:
+                cursor.execute(
+                    """SELECT poolUuid, accessTokenCount FROM lfautomator.accessTokenPoolsHistory 
+                       ORDER BY changeDate DESC"""
+                )
+                all_records = cursor.fetchall()
+                assert (
+                    False
+                ), f"No history found for pool {pool_uuid}. All records: {all_records}"
 
-def test_remove_tokens_creates_history_record():
-    """Test that removing tokens creates a history record."""
-    tokenpool = TokenPool()
-    pool_uuid = tokenpool.create_tokenpool(10)
-
-    # Remove tokens
-    tokenpool.remove_tokens_from_tokenpool(3)
-
-    # Check history was created
-    with tokenpool.db.connection:
-        with tokenpool.db.connection.cursor() as cursor:
-            cursor.execute(
-                """SELECT accessTokenCount FROM lfautomator.accessTokenPoolsHistory 
-                   WHERE poolUuid = %s ORDER BY changeDate DESC LIMIT 1""",
-                (pool_uuid,),
-            )
-            result = cursor.fetchone()
-            assert result is not None
-            assert result[0] == -3  # Negative for withdrawal
-
-
-def test_history_records_multiple_transactions():
-    """Test that multiple transactions create multiple history records."""
-    tokenpool = TokenPool()
-    pool_uuid = tokenpool.create_tokenpool(20)
-
-    # Perform multiple transactions
-    tokenpool.add_tokens_to_tokenpool(5)
-    tokenpool.remove_tokens_from_tokenpool(3)
-    tokenpool.add_tokens_to_tokenpool(10)
-
-    # Check all history records were created
-    with tokenpool.db.connection:
-        with tokenpool.db.connection.cursor() as cursor:
-            cursor.execute(
-                """SELECT accessTokenCount FROM lfautomator.accessTokenPoolsHistory 
-                   WHERE poolUuid = %s ORDER BY changeDate ASC""",
-                (pool_uuid,),
-            )
-            results = cursor.fetchall()
-            assert len(results) == 3
-            assert results[0][0] == 5  # First deposit
-            assert results[1][0] == -3  # Withdrawal
-            assert results[2][0] == 10  # Second deposit
-
-
-def test_add_tokens_creates_history_record():
-    """Test that adding tokens creates a history record."""
-    tokenpool = TokenPool()
-    pool_uuid = tokenpool.create_tokenpool(10)
-
-    # Add tokens
-    tokenpool.add_tokens_to_tokenpool(5)
-
-    # Check history was created
-    with tokenpool.db.connection:
-        with tokenpool.db.connection.cursor() as cursor:
-            cursor.execute(
-                """SELECT accessTokenCount FROM lfautomator.accessTokenPoolsHistory 
-                   WHERE poolUuid = %s ORDER BY changeDate DESC LIMIT 1""",
-                (pool_uuid,),
-            )
-            result = cursor.fetchone()
-            assert result is not None
-            assert result[0] == 5  # Positive for deposit
-
-
-def test_remove_tokens_creates_history_record():
-    """Test that removing tokens creates a history record."""
-    tokenpool = TokenPool()
-    pool_uuid = tokenpool.create_tokenpool(10)
-
-    # Remove tokens
-    tokenpool.remove_tokens_from_tokenpool(3)
-
-    # Check history was created
-    with tokenpool.db.connection:
-        with tokenpool.db.connection.cursor() as cursor:
-            cursor.execute(
-                """SELECT accessTokenCount FROM lfautomator.accessTokenPoolsHistory 
-                   WHERE poolUuid = %s ORDER BY changeDate DESC LIMIT 1""",
-                (pool_uuid,),
-            )
-            result = cursor.fetchone()
-            assert result is not None
-            assert result[0] == -3  # Negative for withdrawal
+            assert result[0] == pool_uuid
+            assert result[1] == -5  # Negative for distribution
 
 
 def test_history_records_multiple_transactions():
