@@ -2,7 +2,7 @@
 
 import os
 
-from psycopg2 import OperationalError, connect
+from psycopg2 import InterfaceError, OperationalError, connect
 
 
 class Database:
@@ -29,6 +29,42 @@ class Database:
             print(f"Error connecting to the database: {error}")
             self.connection = None
             self.cursor = None
+
+    def ensure_connection(self):
+        """Ensure database connection is alive, reconnect if necessary.
+
+        This method checks if the connection is still valid and reconnects
+        if it has been closed or is in an invalid state.
+        """
+        try:
+            # Check if connection exists and is not closed
+            if self.connection is None or self.connection.closed:
+                print("Database connection is closed, reconnecting...")
+                self.create_connection()
+                return
+
+            # Check if cursor exists and is not closed
+            if self.cursor is None or self.cursor.closed:
+                print("Database cursor is closed, recreating...")
+                self.cursor = self.connection.cursor()
+                return
+
+            # Test the connection with a simple query
+            self.cursor.execute("SELECT 1")
+            self.cursor.fetchone()
+        except (OperationalError, InterfaceError) as error:
+            print(f"Database connection test failed, reconnecting: {error}")
+            # Close any existing connection
+            try:
+                if self.cursor is not None and not self.cursor.closed:
+                    self.cursor.close()
+                if self.connection is not None and not self.connection.closed:
+                    self.connection.close()
+            except Exception:
+                pass  # Ignore errors during cleanup
+
+            # Reconnect
+            self.create_connection()
 
     def close(self):
         """Close the database connection"""

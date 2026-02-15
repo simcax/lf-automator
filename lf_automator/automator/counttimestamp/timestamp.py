@@ -45,6 +45,9 @@ class CountTimestampManager:
         Raises:
             ValueError: If database operation fails
         """
+        # Ensure connection is alive before executing queries
+        self.db.ensure_connection()
+
         try:
             with self.db.connection:
                 with self.db.connection.cursor() as cursor:
@@ -78,6 +81,9 @@ class CountTimestampManager:
         Raises:
             ValueError: If database operation fails
         """
+        # Ensure connection is alive before executing queries
+        self.db.ensure_connection()
+
         try:
             # Convert metadata dict to JSON string if provided
             metadata_json = json.dumps(metadata) if metadata is not None else None
@@ -140,6 +146,9 @@ class CountTimestampManager:
         Raises:
             ValueError: If database operation fails
         """
+        # Ensure connection is alive before executing queries
+        self.db.ensure_connection()
+
         try:
             with self.db.connection:
                 with self.db.connection.cursor() as cursor:

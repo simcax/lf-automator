@@ -39,14 +39,20 @@ class AlertManager:
         );
         """
         try:
+            # Ensure connection is alive before executing queries
+            self.db.ensure_connection()
+
             with self.db.connection:
                 with self.db.connection.cursor() as cursor:
                     cursor.execute(create_table_query)
             logger.debug("Alert state table ensured")
         except Exception as e:
             logger.error(f"Error creating alertState table: {e}")
-            if self.db.connection:
-                self.db.connection.rollback()
+            try:
+                if self.db.connection and not self.db.connection.closed:
+                    self.db.connection.rollback()
+            except Exception:
+                pass  # Ignore errors during rollback
 
     def check_threshold(self, current_count: int) -> bool:
         """Check if current count is below threshold and alert should be sent.
@@ -148,6 +154,9 @@ class AlertManager:
         """
 
         try:
+            # Ensure connection is alive before executing queries
+            self.db.ensure_connection()
+
             with self.db.connection:
                 with self.db.connection.cursor() as cursor:
                     cursor.execute(query)
@@ -192,6 +201,9 @@ class AlertManager:
         """
 
         try:
+            # Ensure connection is alive before executing queries
+            self.db.ensure_connection()
+
             with self.db.connection:
                 with self.db.connection.cursor() as cursor:
                     cursor.execute(check_query)
@@ -215,6 +227,9 @@ class AlertManager:
 
         except Exception as e:
             logger.error(f"Error updating alert state: {e}")
-            if self.db.connection:
-                self.db.connection.rollback()
+            try:
+                if self.db.connection and not self.db.connection.closed:
+                    self.db.connection.rollback()
+            except Exception:
+                pass  # Ignore errors during rollback
             raise

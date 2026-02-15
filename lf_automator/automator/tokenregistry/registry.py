@@ -45,6 +45,9 @@ class TokenRegistry:
         """
         from loguru import logger
 
+        # Ensure connection is alive before executing queries
+        self.db.ensure_connection()
+
         if self.db.connection is None or self.db.cursor is None:
             raise ValueError("Database connection not established")
 
@@ -83,8 +86,12 @@ class TokenRegistry:
                 )
                 return True
         except Exception as error:
-            if self.db.connection is not None:
-                self.db.connection.rollback()
+            # Ensure connection is still valid before rollback
+            try:
+                if self.db.connection is not None and not self.db.connection.closed:
+                    self.db.connection.rollback()
+            except Exception:
+                pass  # Ignore errors during rollback
             raise ValueError(f"Error registering member token: {error}")
 
     def get_members_registered_since(self, timestamp: datetime) -> List[Dict]:
@@ -99,6 +106,9 @@ class TokenRegistry:
         Raises:
             ValueError: If database operation fails
         """
+        # Ensure connection is alive before executing queries
+        self.db.ensure_connection()
+
         try:
             self.db.cursor.execute(
                 """SELECT memberUuid, tokenNumber, registeredAt, updatedAt 
@@ -132,6 +142,9 @@ class TokenRegistry:
         Raises:
             ValueError: If database operation fails
         """
+        # Ensure connection is alive before executing queries
+        self.db.ensure_connection()
+
         try:
             self.db.cursor.execute(
                 """SELECT memberUuid, tokenNumber, registeredAt, updatedAt 
@@ -164,6 +177,9 @@ class TokenRegistry:
         Raises:
             ValueError: If database operation fails
         """
+        # Ensure connection is alive before executing queries
+        self.db.ensure_connection()
+
         try:
             self.db.cursor.execute(
                 "SELECT COUNT(*) FROM lfautomator.memberTokenRegistry WHERE memberUuid = %s",
