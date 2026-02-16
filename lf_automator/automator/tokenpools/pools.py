@@ -41,6 +41,7 @@ class TokenPool:
             if pool_priority is None:
                 pool_priority = self._get_next_priority()
 
+            self.db.ensure_connection()
             with self.db.connection:
                 with self.db.connection.cursor() as cursor:
                     cursor.execute(
@@ -66,6 +67,7 @@ class TokenPool:
         """Get the token count for the pool."""
         token_count = None
         try:
+            self.db.ensure_connection()
             with self.db.connection:
                 with self.db.connection.cursor() as cursor:
                     cursor.execute(
@@ -80,6 +82,7 @@ class TokenPool:
     def add_tokens_to_tokenpool(self, token_count):
         """Add tokens to the token pool."""
         try:
+            self.db.ensure_connection()
             with self.db.connection:
                 with self.db.connection.cursor() as cursor:
                     cursor.execute(
@@ -104,6 +107,7 @@ class TokenPool:
         if self.current_token_count - token_count < 0:
             raise (ValueError("Not enough tokens in the pool"))
         try:
+            self.db.ensure_connection()
             with self.db.connection:
                 with self.db.connection.cursor() as cursor:
                     cursor.execute(
@@ -125,6 +129,7 @@ class TokenPool:
     def _get_next_priority(self) -> int:
         """Get the next priority value for a new pool (max + 1)"""
         try:
+            self.db.ensure_connection()
             with self.db.connection:
                 with self.db.connection.cursor() as cursor:
                     cursor.execute(
@@ -156,6 +161,7 @@ class TokenPool:
                 row = cursor.fetchone()
             else:
                 # Create own connection context
+                self.db.ensure_connection()
                 with self.db.connection:
                     with self.db.connection.cursor() as cur:
                         cur.execute(
@@ -187,6 +193,7 @@ class TokenPool:
             List of dicts with pool info
         """
         try:
+            self.db.ensure_connection()
             with self.db.connection:
                 with self.db.connection.cursor() as cursor:
                     cursor.execute(
@@ -217,6 +224,7 @@ class TokenPool:
             Total count of available tokens
         """
         try:
+            self.db.ensure_connection()
             with self.db.connection:
                 with self.db.connection.cursor() as cursor:
                     cursor.execute(
@@ -250,6 +258,7 @@ class TokenPool:
         pools_used = []
 
         try:
+            self.db.ensure_connection()
             with self.db.connection:
                 with self.db.connection.cursor() as cursor:
                     while remaining_to_distribute > 0:
@@ -336,6 +345,7 @@ class TokenPool:
 
             if current_primary and current_primary["current_count"] == 0:
                 # Mark as depleted
+                self.db.ensure_connection()
                 with self.db.connection:
                     with self.db.connection.cursor() as cursor:
                         cursor.execute(
