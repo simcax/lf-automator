@@ -12,7 +12,7 @@ app_dir = Path(__file__).parent / "lf-automator"
 sys.path.insert(0, str(app_dir))
 
 # Now import and run the main module
-from main import main
+from main import main  # noqa: E402
 
 if __name__ == "__main__":
     sys.exit(main())
